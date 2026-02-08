@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Font - Heed Brush */
+@font-face {
+  font-family: 'HeedBrush';
+  src: url('/HeedBrush.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-heed {
+  font-family: 'HeedBrush', cursive;
+  line-height: 1.4;
+  padding-right: 0.3em;
+  padding-bottom: 0.1em;
+  display: inline-block;
+  overflow: visible;
+  letter-spacing: 0.02em;
+}
+
+/* Better base typography */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Heading improvements */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
