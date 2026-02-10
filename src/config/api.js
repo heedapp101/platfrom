@@ -42,6 +42,9 @@ export const API_ENDPOINTS = {
   SELLER: {
     STATS: `${API_BASE_URL}/images/seller/stats`,
     POSTS: `${API_BASE_URL}/images/posts/me`,
+    UPDATE_POST: (postId) => `${API_BASE_URL}/images/${postId}`,
+    DELETE_POST: (postId) => `${API_BASE_URL}/images/${postId}`,
+    ARCHIVE_POST: (postId) => `${API_BASE_URL}/images/${postId}/archive`,
     BOOST_STATUS: `${API_BASE_URL}/images/boost/status`,
     BOOST_POST: (postId) => `${API_BASE_URL}/images/boost/${postId}`,
     ORDERS: `${API_BASE_URL}/orders/seller/orders`,
