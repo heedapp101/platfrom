@@ -22,6 +22,7 @@ import SellerSettings from "./pages/seller/Settings";
 /* ADMIN */
 import Overview from "./pages/admin/Overview";
 import AdminUsers from "./pages/admin/Users";
+import DeletedUsers from "./pages/admin/DeletedUsers";
 import AdminApprovals from "./pages/admin/Approvals";
 import Revenue from "./pages/admin/Revenue";
 import AdminChat from "./pages/admin/Chat";
@@ -29,6 +30,7 @@ import AdminAds from "./pages/admin/Ads";
 import BoostControl from "./pages/admin/BoostControl";
 import Compliance from "./pages/admin/Compliance";
 import ReportedPosts from "./pages/admin/ReportedPosts";
+import Legal from "./pages/admin/Legal";
 
 export default function App() {
   return (
@@ -65,6 +67,7 @@ export default function App() {
       >
         <Route index element={<Overview />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="deleted-users" element={<DeletedUsers />} />
         <Route path="approvals" element={<AdminApprovals />} />
         <Route path="revenue" element={<Revenue />} />
         <Route path="chat" element={<AdminChat />} />
@@ -72,6 +75,7 @@ export default function App() {
         <Route path="boosts" element={<BoostControl />} />
         <Route path="compliance" element={<Compliance />} />
         <Route path="reports" element={<ReportedPosts />} />
+        <Route path="legal" element={<Legal />} />
       </Route>
 
       {/* FALLBACK */}

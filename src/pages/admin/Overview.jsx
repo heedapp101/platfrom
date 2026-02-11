@@ -76,12 +76,18 @@ export default function Overview() {
       </div>
 
       {/* PLATFORM STAT CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard 
           title="Total Users" 
           value={dashboardData?.stats.totalUsers} 
           icon="👥" 
           bg="bg-blue-50 text-blue-600" 
+        />
+        <StatCard 
+          title="Deleted Users" 
+          value={dashboardData?.stats.deletedUsers} 
+          icon="DEL" 
+          bg="bg-rose-50 text-rose-600" 
         />
         <StatCard 
           title="Total Posts" 
@@ -482,3 +488,5 @@ function MetricCard({ icon, title, value, subtitle, color, bgColor }) {
     </div>
   );
 }
+
+

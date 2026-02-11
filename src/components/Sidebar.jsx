@@ -38,6 +38,10 @@ export default function Sidebar({ collapsed }) {
                <span>👥</span>
                {!collapsed && <span>Users</span>}
             </NavLink>
+            <NavLink to={`${basePath}/deleted-users`} className={linkClass}>
+               <span>DEL</span>
+               {!collapsed && <span>Deleted Users</span>}
+            </NavLink>
             <NavLink to={`${basePath}/approvals`} className={linkClass}>
                <span>✅</span>
                {!collapsed && <span>Approvals</span>}
@@ -61,6 +65,10 @@ export default function Sidebar({ collapsed }) {
             <NavLink to={`${basePath}/compliance`} className={linkClass}>
                <span>🛡️</span>
                {!collapsed && <span>Compliance</span>}
+            </NavLink>
+            <NavLink to={`${basePath}/legal`} className={linkClass}>
+               <span>ðŸ“„</span>
+               {!collapsed && <span>Legal Docs</span>}
             </NavLink>
             <NavLink to={`${basePath}/reports`} className={linkClass}>
                <span>🚩</span>
@@ -96,3 +104,5 @@ export default function Sidebar({ collapsed }) {
     </aside>
   );
 } 
+
+
