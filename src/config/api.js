@@ -35,9 +35,16 @@ export const API_ENDPOINTS = {
     APPROVE: (id) => `${API_BASE_URL}/admin/approve/${id}`,
     REJECT: (id) => `${API_BASE_URL}/admin/reject/${id}`,
     USERS: (params = "") => `${API_BASE_URL}/admin/users${params}`,
+    DELETED_USERS: `${API_BASE_URL}/admin/users/deleted`,
     REPORTS: `${API_BASE_URL}/admin/reports`,
     UPDATE_REPORT: (reportId) => `${API_BASE_URL}/admin/reports/${reportId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/admin/reports/post/${postId}`,
+  },
+  LEGAL: {
+    LIST: `${API_BASE_URL}/legal/admin`,
+    CREATE: `${API_BASE_URL}/legal/admin`,
+    UPDATE: (id) => `${API_BASE_URL}/legal/admin/${id}`,
+    TOGGLE: (id) => `${API_BASE_URL}/legal/admin/${id}/toggle`,
   },
   SELLER: {
     STATS: `${API_BASE_URL}/images/seller/stats`,
