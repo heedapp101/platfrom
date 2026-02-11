@@ -3,6 +3,8 @@ import ProtectedRoute from "./ProtectedRoute";
 
 /* PUBLIC */
 import LandingPage from "./pages/LandingPage";
+import PublicPost from "./pages/PublicPost";
+import PublicProfile from "./pages/PublicProfile";
 
 /* AUTH */
 import Login from "./pages/auth/Login";
@@ -37,6 +39,8 @@ export default function App() {
     <Routes>
       {/* PUBLIC */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/post/:postId" element={<PublicPost />} />
+      <Route path="/profile/:userId" element={<PublicProfile />} />
       <Route path="/login" element={<Login />} />
 
       {/* SELLER */}
