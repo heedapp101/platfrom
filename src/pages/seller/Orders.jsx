@@ -70,10 +70,9 @@ export default function SellerOrders() {
     const token = localStorage.getItem("token");
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      params.append("status", currentTab.statuses);
+      const url = `${API_ENDPOINTS.SELLER.ORDERS}?status=${currentTab.statuses}`;
 
-      const res = await fetch(`${API_ENDPOINTS.SELLER.ORDERS}?${params}`, {
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
