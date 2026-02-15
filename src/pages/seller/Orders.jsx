@@ -3,38 +3,40 @@ import { API_ENDPOINTS } from "../../config/api";
 import {
   Package, Clock, CheckCircle, Truck, XCircle, RefreshCw,
   Eye, Phone, MapPin, User, ChevronRight, X, Link2, Hash,
-  CreditCard, ShoppingBag, Ban, ArrowRight
+  CreditCard, ShoppingBag, Ban, ArrowRight, AlertTriangle, Calendar
 } from "lucide-react";
 
 const STATUS_CONFIG = {
   pending: { label: "Pending", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500", icon: Clock },
   confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-700", dot: "bg-blue-500", icon: CheckCircle },
-  processing: { label: "Processing", color: "bg-purple-100 text-purple-700", dot: "bg-purple-500", icon: Package },
+  shipping_initiated: { label: "Shipping Initiated", color: "bg-sky-100 text-sky-700", dot: "bg-sky-500", icon: Package },
   shipped: { label: "Shipped", color: "bg-cyan-100 text-cyan-700", dot: "bg-cyan-500", icon: Truck },
   out_for_delivery: { label: "Out for Delivery", color: "bg-teal-100 text-teal-700", dot: "bg-teal-500", icon: Truck },
   delivered: { label: "Delivered", color: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", icon: CheckCircle },
   cancelled: { label: "Cancelled", color: "bg-red-100 text-red-700", dot: "bg-red-500", icon: XCircle },
+  disputed: { label: "Disputed", color: "bg-rose-100 text-rose-700", dot: "bg-rose-500", icon: AlertTriangle },
   refund_requested: { label: "Refund Requested", color: "bg-orange-100 text-orange-700", dot: "bg-orange-500", icon: RefreshCw },
   refunded: { label: "Refunded", color: "bg-gray-100 text-gray-600", dot: "bg-gray-500", icon: RefreshCw },
 };
 
 const TABS = [
-  { key: "orders", label: "Orders", statuses: "pending,confirmed,processing", statusKeys: ["pending", "confirmed", "processing"], icon: ShoppingBag },
-  { key: "shipping", label: "Shipping", statuses: "shipped,out_for_delivery", statusKeys: ["shipped"], icon: Truck },
+  { key: "orders", label: "Orders", statuses: "pending,confirmed", statusKeys: ["pending", "confirmed"], icon: ShoppingBag },
+  { key: "shipping", label: "Shipping", statuses: "shipping_initiated,shipped,out_for_delivery", statusKeys: ["shipping_initiated", "shipped"], icon: Truck },
   { key: "delivered", label: "Delivered", statuses: "delivered", statusKeys: ["delivered"], icon: CheckCircle },
-  { key: "cancelled", label: "Cancelled", statuses: "cancelled,refund_requested,refunded", statusKeys: ["cancelled"], icon: Ban },
+  { key: "cancelled", label: "Cancelled", statuses: "cancelled,disputed,refund_requested,refunded", statusKeys: ["cancelled", "disputed"], icon: Ban },
 ];
 
 const STATUS_ACTIONS = {
   pending: [
-    { next: "processing", label: "Process Order", color: "bg-purple-600 hover:bg-purple-700 text-white" },
+    { next: "confirmed", label: "Confirm Order", color: "bg-blue-600 hover:bg-blue-700 text-white" },
     { next: "cancelled", label: "Cancel & Refund", color: "bg-white border border-red-200 text-red-600 hover:bg-red-50" },
   ],
   confirmed: [
-    { next: "processing", label: "Start Processing", color: "bg-purple-600 hover:bg-purple-700 text-white" },
+    { next: "shipping_initiated", label: "Initiate Shipping", color: "bg-sky-600 hover:bg-sky-700 text-white" },
+    { next: "cancelled", label: "Cancel & Refund", color: "bg-white border border-red-200 text-red-600 hover:bg-red-50" },
   ],
-  processing: [
-    { next: "shipped", label: "Ship Order", color: "bg-cyan-600 hover:bg-cyan-700 text-white", needsModal: true },
+  shipping_initiated: [
+    { next: "shipped", label: "Confirm Shipping", color: "bg-cyan-600 hover:bg-cyan-700 text-white", needsModal: true },
   ],
   shipped: [
     { next: "delivered", label: "Mark Delivered", color: "bg-emerald-600 hover:bg-emerald-700 text-white" },
@@ -44,6 +46,9 @@ const STATUS_ACTIONS = {
   ],
   delivered: [],
   cancelled: [],
+  disputed: [
+    { next: "refunded", label: "Process Refund", color: "bg-orange-600 hover:bg-orange-700 text-white" },
+  ],
   refund_requested: [
     { next: "refunded", label: "Process Refund", color: "bg-orange-600 hover:bg-orange-700 text-white" },
   ],
@@ -63,6 +68,7 @@ export default function SellerOrders() {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippingCarrier, setShippingCarrier] = useState("");
   const [trackingLink, setTrackingLink] = useState("");
+  const [estimatedDays, setEstimatedDays] = useState("3");
 
   const currentTab = TABS.find((t) => t.key === activeTab);
 
@@ -119,17 +125,25 @@ export default function SellerOrders() {
 
   const handleShipOrder = async () => {
     if (!shipModalOrder) return;
-    const extra = {};
-    if (trackingNumber) {
-      extra.trackingNumber = trackingNumber;
-      extra.shippingCarrier = shippingCarrier || "Standard Shipping";
-      if (trackingLink) extra.trackingLink = trackingLink;
+    if (!trackingNumber.trim()) {
+      alert("Tracking number is required to confirm shipping.");
+      return;
     }
+    const days = parseInt(estimatedDays) || 3;
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + days);
+    const extra = {
+      trackingNumber: trackingNumber.trim(),
+      shippingCarrier: shippingCarrier || "Standard Shipping",
+      estimatedDelivery: deliveryDate.toISOString(),
+    };
+    if (trackingLink) extra.trackingLink = trackingLink;
     await handleStatusUpdate(shipModalOrder._id, "shipped", extra);
     setShipModalOrder(null);
     setTrackingNumber("");
     setShippingCarrier("");
     setTrackingLink("");
+    setEstimatedDays("3");
   };
 
   const handleAction = (order, action) => {
@@ -318,6 +332,7 @@ export default function SellerOrders() {
             setTrackingNumber("");
             setShippingCarrier("");
             setTrackingLink("");
+            setEstimatedDays("3");
           }}
           onShip={handleShipOrder}
           updating={updating === shipModalOrder._id}
@@ -327,6 +342,8 @@ export default function SellerOrders() {
           setShippingCarrier={setShippingCarrier}
           trackingLink={trackingLink}
           setTrackingLink={setTrackingLink}
+          estimatedDays={estimatedDays}
+          setEstimatedDays={setEstimatedDays}
         />
       )}
     </div>
@@ -515,6 +532,67 @@ function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime }
                       </a>
                     </div>
                   )}
+                  {order.estimatedDelivery && (
+                    <div className="flex items-center gap-2.5 text-sm">
+                      <Calendar size={15} className="text-cyan-600" />
+                      <span className="text-slate-700">
+                        Est. delivery: {new Date(order.estimatedDelivery).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Delivery & Dispute info */}
+            {order.status === "delivered" && order.deliveredAt && (
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Delivery</h3>
+                {(() => {
+                  const deliveredTime = new Date(order.deliveredAt).getTime();
+                  const disputeDeadline = deliveredTime + 24 * 60 * 60 * 1000;
+                  const now = Date.now();
+                  const hoursLeft = Math.max(0, Math.ceil((disputeDeadline - now) / (1000 * 60 * 60)));
+                  const disputeWindowOpen = now < disputeDeadline;
+                  return (
+                    <div className={`rounded-xl p-4 space-y-2 ${disputeWindowOpen ? "bg-amber-50 border border-amber-100" : "bg-emerald-50 border border-emerald-100"}`}>
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <CheckCircle size={15} className="text-emerald-600" />
+                        <span className="text-slate-700">
+                          Delivered on {new Date(order.deliveredAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      {disputeWindowOpen ? (
+                        <div className="flex items-center gap-2.5 text-sm">
+                          <AlertTriangle size={15} className="text-amber-600" />
+                          <span className="text-amber-700 font-medium">
+                            Buyer dispute window: {hoursLeft}h remaining
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2.5 text-sm">
+                          <CheckCircle size={15} className="text-emerald-600" />
+                          <span className="text-emerald-700 font-medium">Dispute window closed — order finalized</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Disputed info */}
+            {order.status === "disputed" && (
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Dispute</h3>
+                <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <AlertTriangle size={15} className="text-rose-600" />
+                    <span className="text-rose-700 font-medium">The buyer has raised a dispute for this order.</span>
+                  </div>
+                  {order.disputeReason && (
+                    <p className="text-sm text-slate-700 mt-2 pl-6">{order.disputeReason}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -597,7 +675,11 @@ function ShipModal({
   trackingNumber, setTrackingNumber,
   shippingCarrier, setShippingCarrier,
   trackingLink, setTrackingLink,
+  estimatedDays, setEstimatedDays,
 }) {
+  const deliveryDate = new Date();
+  deliveryDate.setDate(deliveryDate.getDate() + (parseInt(estimatedDays) || 3));
+
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
@@ -607,7 +689,7 @@ function ShipModal({
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Ship Order</h2>
+            <h2 className="text-lg font-bold text-slate-800">Confirm Shipping</h2>
             <p className="text-sm text-slate-400 mt-0.5">
               #{order.orderNumber?.slice(-6).toUpperCase()} • ₹{order.totalAmount}
             </p>
@@ -633,7 +715,7 @@ function ShipModal({
 
           {/* Inputs */}
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Tracking Number</label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Tracking Number *</label>
             <input
               type="text"
               placeholder="Enter tracking number"
@@ -662,6 +744,29 @@ function ShipModal({
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
             />
           </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Estimated Delivery (days)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                max="30"
+                value={estimatedDays}
+                onChange={(e) => setEstimatedDays(e.target.value)}
+                className="w-24 px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+              />
+              <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                <Calendar size={13} />
+                <span>Arrives by {deliveryDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info about what gets sent */}
+          <div className="bg-blue-50 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
+            <Package size={14} className="mt-0.5 flex-shrink-0" />
+            <span>A message with tracking details and delivery date will be sent to the buyer in chat.</span>
+          </div>
         </div>
 
         {/* Footer */}
@@ -674,17 +779,17 @@ function ShipModal({
           </button>
           <button
             onClick={onShip}
-            disabled={updating}
+            disabled={updating || !trackingNumber.trim()}
             className="px-6 py-2.5 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 disabled:opacity-50 flex items-center gap-2 transition-colors"
           >
             {updating ? (
               <>
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Shipping...
+                Confirming...
               </>
             ) : (
               <>
-                <Truck size={16} /> Mark as Shipped
+                <Truck size={16} /> Confirm Shipping
               </>
             )}
           </button>
