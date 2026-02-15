@@ -214,7 +214,7 @@ export default function AdminUsers() {
       {/* USER DETAILS MODAL */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative animate-fade-in">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative animate-fade-in max-h-[90vh] flex flex-col">
             
             {/* Header Image/Banner */}
             <div className="h-24 bg-gradient-to-r from-slate-800 to-slate-900 relative">
@@ -227,7 +227,7 @@ export default function AdminUsers() {
             </div>
 
             {/* Profile Content */}
-            <div className="px-6 pb-6">
+            <div className="px-6 pb-6 overflow-y-auto">
               {/* Avatar */}
               <div className="relative -mt-12 mb-4 flex justify-between items-end">
                 <div className="w-24 h-24 rounded-full border-4 border-white bg-white overflow-hidden shadow-md">
@@ -277,8 +277,8 @@ export default function AdminUsers() {
                 </div>
               </div>
 
-              {/* Interests Tags (Only visible here) */}
-              <div className="mb-8">
+              {/* Interests Tags */}
+              <div className="mb-6">
                 <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Interests</h4>
                 <div className="flex flex-wrap gap-2">
                   {selectedUser.interests?.length > 0 ? (
@@ -292,6 +292,107 @@ export default function AdminUsers() {
                   )}
                 </div>
               </div>
+
+              {/* ===== BUSINESS USER DETAILS ===== */}
+              {selectedUser.userType === 'business' && (
+                <div className="mb-6 space-y-5">
+                  {/* Company & Contact */}
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3 border-b border-slate-200 pb-1">Business Info</h4>
+                    <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                      {selectedUser.companyName && (
+                        <><span className="text-slate-500">Company:</span><span className="font-medium">{selectedUser.companyName}</span></>
+                      )}
+                      {selectedUser.productType && (
+                        <><span className="text-slate-500">Product:</span><span className="font-medium">{selectedUser.productType}</span></>
+                      )}
+                      {selectedUser.phone && (
+                        <><span className="text-slate-500">Phone:</span><span className="font-medium">{selectedUser.phone}</span></>
+                      )}
+                      {selectedUser.address && (
+                        <><span className="text-slate-500">Address:</span><span className="font-medium">{selectedUser.address}</span></>
+                      )}
+                      {selectedUser.country && (
+                        <><span className="text-slate-500">Country:</span><span className="font-medium">{selectedUser.country}</span></>
+                      )}
+                      {selectedUser.bio && (
+                        <><span className="text-slate-500">Bio:</span><span className="font-medium">{selectedUser.bio}</span></>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {selectedUser.cashOnDeliveryAvailable && <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold">COD Available</span>}
+                      {selectedUser.allIndiaDelivery && <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-bold">All India Delivery</span>}
+                      {selectedUser.freeShipping && <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded font-bold">Free Shipping</span>}
+                      {selectedUser.requireChatBeforePurchase && <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-bold">Chat Before Purchase</span>}
+                      {selectedUser.autoReplyEnabled && <span className="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded font-bold">Auto-Reply On</span>}
+                    </div>
+                    {selectedUser.returnPolicy && (
+                      <div className="mt-3 text-sm"><span className="text-slate-500">Return Policy:</span><p className="font-medium mt-1 bg-white p-2 rounded border border-slate-100">{selectedUser.returnPolicy}</p></div>
+                    )}
+                  </div>
+
+                  {/* Legal & ID */}
+                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3 border-b border-slate-200 pb-1">Legal & ID Details</h4>
+                    <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                      <span className="text-slate-500">GST No:</span>
+                      <span className="font-mono bg-white px-1 rounded border border-slate-100">{selectedUser.gstNumber || 'N/A'}</span>
+                      <span className="text-slate-500">ID Type:</span>
+                      <span className="font-medium">{selectedUser.idProofType || 'N/A'}</span>
+                      <span className="text-slate-500">ID Number:</span>
+                      <span className="font-mono bg-white px-1 rounded border border-slate-100">{selectedUser.idProofNumber || 'N/A'}</span>
+                    </div>
+                    {/* ID Proof Document */}
+                    <div className="mt-3">
+                      <p className="text-slate-500 text-sm mb-2">Attached ID Proof:</p>
+                      {selectedUser.idProofUrl ? (
+                        selectedUser.idProofUrl.toLowerCase().includes('.pdf') ? (
+                          <a href={getDocumentUrl(selectedUser.idProofUrl)} target="_blank" rel="noreferrer"
+                            className="flex flex-col items-center justify-center w-full h-24 bg-white rounded border hover:bg-slate-100 transition-colors gap-1 text-slate-600">
+                            <span className="text-3xl">📄</span>
+                            <span className="text-xs font-bold">Click to View PDF</span>
+                          </a>
+                        ) : (
+                          <a href={getDocumentUrl(selectedUser.idProofUrl)} target="_blank" rel="noreferrer"
+                            className="block w-full h-24 bg-white rounded border hover:opacity-90 transition-opacity overflow-hidden relative group">
+                            <img src={getDocumentUrl(selectedUser.idProofUrl)} alt="ID Proof" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-bold">Click to Enlarge</div>
+                          </a>
+                        )
+                      ) : (
+                        <div className="w-full h-16 bg-red-50 text-red-500 border border-red-100 rounded flex items-center justify-center text-sm">No ID Document Uploaded</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Payment Details */}
+                  {selectedUser.paymentDetails && (selectedUser.paymentDetails.upiId || selectedUser.paymentDetails.accountNumber || selectedUser.paymentDetails.bankName) && (
+                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3 border-b border-slate-200 pb-1">Payment Details</h4>
+                      <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                        {selectedUser.paymentDetails.upiId && (
+                          <><span className="text-slate-500">UPI ID:</span><span className="font-mono bg-white px-1 rounded border border-slate-100">{selectedUser.paymentDetails.upiId}</span></>
+                        )}
+                        {selectedUser.paymentDetails.bankName && (
+                          <><span className="text-slate-500">Bank:</span><span className="font-medium">{selectedUser.paymentDetails.bankName}</span></>
+                        )}
+                        {selectedUser.paymentDetails.accountHolderName && (
+                          <><span className="text-slate-500">Holder:</span><span className="font-medium">{selectedUser.paymentDetails.accountHolderName}</span></>
+                        )}
+                        {selectedUser.paymentDetails.accountNumber && (
+                          <><span className="text-slate-500">Account:</span><span className="font-mono bg-white px-1 rounded border border-slate-100">{selectedUser.paymentDetails.accountNumber}</span></>
+                        )}
+                        {selectedUser.paymentDetails.ifsc && (
+                          <><span className="text-slate-500">IFSC:</span><span className="font-mono bg-white px-1 rounded border border-slate-100">{selectedUser.paymentDetails.ifsc}</span></>
+                        )}
+                        {selectedUser.paymentDetails.phone && (
+                          <><span className="text-slate-500">Phone:</span><span className="font-medium">{selectedUser.paymentDetails.phone}</span></>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Chat Button */}
               <button 
