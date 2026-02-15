@@ -9,7 +9,7 @@
 // ==========================================
 
 // Environment variables (loaded from .env)
-const DEV_MACHINE_IP = import.meta.env.VITE_DEV_MACHINE_IP || "192.168.29.230";
+const DEV_MACHINE_IP = import.meta.env.VITE_DEV_MACHINE_IP || "192.168.1.9";
 const DEV_PORT = import.meta.env.VITE_DEV_PORT || "5000";
 const DEV_API_URL = `http://${DEV_MACHINE_IP}:${DEV_PORT}/api`;
 const PROD_API_URL = import.meta.env.VITE_API_URL || "https://heedend-production.up.railway.app/api";
