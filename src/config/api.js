@@ -42,6 +42,9 @@ export const API_ENDPOINTS = {
     REPORTS: `${API_BASE_URL}/admin/reports`,
     UPDATE_REPORT: (reportId) => `${API_BASE_URL}/admin/reports/${reportId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/admin/reports/post/${postId}`,
+    USER_REPORTS: `${API_BASE_URL}/admin/user-reports`,
+    UPDATE_USER_REPORT: (reportId) => `${API_BASE_URL}/admin/user-reports/${reportId}`,
+    BAN_USER: (userId) => `${API_BASE_URL}/admin/user-reports/user/${userId}`,
   },
   LEGAL: {
     LIST: `${API_BASE_URL}/legal/admin`,
