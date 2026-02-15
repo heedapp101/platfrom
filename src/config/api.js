@@ -58,6 +58,8 @@ export const API_ENDPOINTS = {
     BOOST_STATUS: `${API_BASE_URL}/images/boost/status`,
     BOOST_POST: (postId) => `${API_BASE_URL}/images/boost/${postId}`,
     ORDERS: `${API_BASE_URL}/orders/seller/orders`,
+    ORDER_STATS: `${API_BASE_URL}/orders/seller/stats`,
+    ANALYTICS: (period = 30) => `${API_BASE_URL}/orders/seller/analytics?period=${period}`,
     ORDER_STATUS: (orderId) => `${API_BASE_URL}/orders/${orderId}/status`,
   },
   IMAGES: {
