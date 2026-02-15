@@ -27,6 +27,9 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_BASE_URL}/auth/login`,
     SIGNUP: `${API_BASE_URL}/auth/signup`,
+    FORGOT_PASSWORD_SEND_OTP: `${API_BASE_URL}/auth/forgot-password/send-otp`,
+    FORGOT_PASSWORD_VERIFY_OTP: `${API_BASE_URL}/auth/forgot-password/verify-otp`,
+    FORGOT_PASSWORD_RESET: `${API_BASE_URL}/auth/forgot-password/reset`,
   },
   ADMIN: {
     STATS: `${API_BASE_URL}/admin/stats`,

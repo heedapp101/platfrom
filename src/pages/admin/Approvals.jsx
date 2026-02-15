@@ -105,7 +105,7 @@ export default function Approvals() {
       ======================= */}
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             
             <div className="p-6 border-b flex justify-between items-center bg-slate-50">
               <h2 className="text-xl font-bold text-slate-800">Business Application Details</h2>
@@ -129,51 +129,60 @@ export default function Approvals() {
                  <div>
                     <h3 className="text-2xl font-bold text-slate-800">{selectedUser.companyName}</h3>
                     <p className="text-slate-500">@{selectedUser.username}</p>
-                    <div className="mt-2 flex gap-2">
+                    {selectedUser.createdAt && (
+                      <p className="text-xs text-slate-400 mt-1">Applied: {new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-2">
                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-bold">
                          {selectedUser.productType || "Retail"}
                        </span>
-                       {selectedUser.cashOnDeliveryAvailable && (
-                         <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold">
-                           COD Available
-                         </span>
-                       )}
                     </div>
                  </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
+                {/* CONTACT INFO */}
                 <div className="space-y-4">
                   <h4 className="font-bold text-sm text-slate-400 uppercase tracking-wider border-b pb-1">Contact Info</h4>
-                  <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
+                  <div className="grid grid-cols-[90px_1fr] gap-2 text-sm">
                     <span className="text-slate-500">Owner:</span>
                     <span className="font-medium">{selectedUser.name}</span>
                     <span className="text-slate-500">Email:</span>
                     <span className="font-medium truncate" title={selectedUser.email}>{selectedUser.email}</span>
                     <span className="text-slate-500">Phone:</span>
-                    <span className="font-medium">{selectedUser.phone}</span>
+                    <span className="font-medium">{selectedUser.phone || "N/A"}</span>
                     <span className="text-slate-500">Address:</span>
                     <span className="font-medium">{selectedUser.address || "N/A"}</span>
+                    <span className="text-slate-500">Location:</span>
+                    <span className="font-medium">{selectedUser.location || "N/A"}</span>
                     <span className="text-slate-500">Country:</span>
                     <span className="font-medium">{selectedUser.country || "N/A"}</span>
                   </div>
+                  {selectedUser.bio && (
+                    <div className="mt-2">
+                      <span className="text-slate-500 text-sm">Bio:</span>
+                      <p className="text-sm font-medium mt-1 bg-slate-50 p-2 rounded">{selectedUser.bio}</p>
+                    </div>
+                  )}
                 </div>
 
+                {/* LEGAL / ID DETAILS */}
                 <div className="space-y-4">
-                  <h4 className="font-bold text-sm text-slate-400 uppercase tracking-wider border-b pb-1">Legal Details</h4>
-                  <div className="grid grid-cols-[80px_1fr] gap-2 text-sm">
+                  <h4 className="font-bold text-sm text-slate-400 uppercase tracking-wider border-b pb-1">Legal & ID Details</h4>
+                  <div className="grid grid-cols-[90px_1fr] gap-2 text-sm">
                     <span className="text-slate-500">GST No:</span>
                     <span className="font-mono bg-slate-100 px-1 rounded">{selectedUser.gstNumber || "N/A"}</span>
                     <span className="text-slate-500">ID Type:</span>
                     <span className="font-medium">{selectedUser.idProofType || "N/A"}</span>
+                    <span className="text-slate-500">ID Number:</span>
+                    <span className="font-mono bg-slate-100 px-1 rounded">{selectedUser.idProofNumber || "N/A"}</span>
                   </div>
 
-                  {/* ✅ MODIFIED: PDF / IMAGE HANDLING */}
+                  {/* PDF / IMAGE HANDLING */}
                   <div className="mt-4">
                     <p className="text-slate-500 text-sm mb-2">Attached ID Proof:</p>
                     {selectedUser.idProofUrl ? (
                       selectedUser.idProofUrl.toLowerCase().includes(".pdf") ? (
-                        // 📄 PDF VIEW
                         <a 
                           href={getDocumentUrl(selectedUser.idProofUrl)} 
                           target="_blank" 
@@ -185,7 +194,6 @@ export default function Approvals() {
                            <span className="text-xs text-slate-400">(Secure Link Generated)</span>
                         </a>
                       ) : (
-                        // 🖼️ IMAGE VIEW
                         <a 
                           href={getDocumentUrl(selectedUser.idProofUrl)} 
                           target="_blank" 
@@ -208,6 +216,110 @@ export default function Approvals() {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* BUSINESS SETTINGS */}
+              <div className="mt-6 grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-bold text-sm text-slate-400 uppercase tracking-wider border-b pb-1">Business Settings</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedUser.cashOnDeliveryAvailable && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded font-bold">COD Available</span>
+                    )}
+                    {selectedUser.allIndiaDelivery && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded font-bold">All India Delivery</span>
+                    )}
+                    {selectedUser.freeShipping && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded font-bold">Free Shipping</span>
+                    )}
+                    {selectedUser.requireChatBeforePurchase && (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded font-bold">Chat Before Purchase</span>
+                    )}
+                    {selectedUser.autoReplyEnabled && (
+                      <span className="px-2 py-1 bg-teal-100 text-teal-700 text-xs rounded font-bold">Auto-Reply On</span>
+                    )}
+                    {!selectedUser.cashOnDeliveryAvailable && !selectedUser.allIndiaDelivery && !selectedUser.freeShipping && !selectedUser.requireChatBeforePurchase && !selectedUser.autoReplyEnabled && (
+                      <span className="text-sm text-slate-400 italic">No flags set</span>
+                    )}
+                  </div>
+                  {selectedUser.returnPolicy && (
+                    <div className="text-sm">
+                      <span className="text-slate-500">Return Policy:</span>
+                      <p className="font-medium mt-1 bg-slate-50 p-2 rounded">{selectedUser.returnPolicy}</p>
+                    </div>
+                  )}
+                  {selectedUser.autoReplyMessage && (
+                    <div className="text-sm">
+                      <span className="text-slate-500">Auto-Reply Message:</span>
+                      <p className="font-medium mt-1 bg-slate-50 p-2 rounded">{selectedUser.autoReplyMessage}</p>
+                    </div>
+                  )}
+                  {selectedUser.customQuickQuestion && (
+                    <div className="text-sm">
+                      <span className="text-slate-500">Quick Question:</span>
+                      <p className="font-medium mt-1 bg-slate-50 p-2 rounded">{selectedUser.customQuickQuestion}</p>
+                    </div>
+                  )}
+                  {selectedUser.inventoryAlertThreshold != null && (
+                    <div className="text-sm">
+                      <span className="text-slate-500">Inventory Alert Threshold:</span>
+                      <span className="font-medium ml-2">{selectedUser.inventoryAlertThreshold}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* PAYMENT DETAILS */}
+                <div className="space-y-4">
+                  <h4 className="font-bold text-sm text-slate-400 uppercase tracking-wider border-b pb-1">Payment Details</h4>
+                  {selectedUser.paymentDetails && (selectedUser.paymentDetails.upiId || selectedUser.paymentDetails.accountNumber || selectedUser.paymentDetails.bankName) ? (
+                    <div className="grid grid-cols-[90px_1fr] gap-2 text-sm">
+                      {selectedUser.paymentDetails.upiId && (
+                        <>
+                          <span className="text-slate-500">UPI ID:</span>
+                          <span className="font-mono bg-slate-100 px-1 rounded">{selectedUser.paymentDetails.upiId}</span>
+                        </>
+                      )}
+                      {selectedUser.paymentDetails.bankName && (
+                        <>
+                          <span className="text-slate-500">Bank:</span>
+                          <span className="font-medium">{selectedUser.paymentDetails.bankName}</span>
+                        </>
+                      )}
+                      {selectedUser.paymentDetails.accountHolderName && (
+                        <>
+                          <span className="text-slate-500">Holder:</span>
+                          <span className="font-medium">{selectedUser.paymentDetails.accountHolderName}</span>
+                        </>
+                      )}
+                      {selectedUser.paymentDetails.accountNumber && (
+                        <>
+                          <span className="text-slate-500">Account:</span>
+                          <span className="font-mono bg-slate-100 px-1 rounded">{selectedUser.paymentDetails.accountNumber}</span>
+                        </>
+                      )}
+                      {selectedUser.paymentDetails.ifsc && (
+                        <>
+                          <span className="text-slate-500">IFSC:</span>
+                          <span className="font-mono bg-slate-100 px-1 rounded">{selectedUser.paymentDetails.ifsc}</span>
+                        </>
+                      )}
+                      {selectedUser.paymentDetails.phone && (
+                        <>
+                          <span className="text-slate-500">Phone:</span>
+                          <span className="font-medium">{selectedUser.paymentDetails.phone}</span>
+                        </>
+                      )}
+                      {selectedUser.paymentDetails.note && (
+                        <>
+                          <span className="text-slate-500">Note:</span>
+                          <span className="font-medium">{selectedUser.paymentDetails.note}</span>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">No payment details provided.</p>
+                  )}
                 </div>
               </div>
             </div>
