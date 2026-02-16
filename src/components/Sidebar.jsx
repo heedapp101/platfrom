@@ -20,7 +20,7 @@ export default function Sidebar({ collapsed }) {
     >
       <div className="h-14 flex items-center justify-center border-b border-slate-800">
         <h1 className={`font-bold text-xl transition-all ${collapsed ? "scale-0 w-0" : "scale-100"}`}>
-          HEED
+          HEESZO
         </h1>
         {collapsed && <span className="font-bold text-xl">H</span>}
       </div>
