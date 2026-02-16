@@ -80,7 +80,7 @@ export default function Login() {
       <div className="w-full max-w-md px-4">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <span className="text-4xl font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Heed </span>
+          <span className="text-4xl font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Heeszo </span>
         </div>
 
         <form onSubmit={submit} className="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">

@@ -74,7 +74,7 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <span className="text-3xl font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Heed </span>
+              <span className="text-3xl font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Heeszo </span>
             </div>
 
             {/* Desktop Nav */}
@@ -131,7 +131,7 @@ export default function LandingPage() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
                 Buy & Sell on{" "}
                 <span className="font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 text-5xl sm:text-6xl lg:text-7xl">
-                  Heed{" "}
+                  Heeszo{" "}
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-xl">
@@ -176,7 +176,7 @@ export default function LandingPage() {
                 {/* App mockup image */}
                 <img 
                   src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&h=500&fit=crop" 
-                  alt="Heed Mobile App" 
+                  alt="Heeszo Mobile App" 
                   className="rounded-2xl shadow-2xl"
                 />
               </div>
@@ -222,7 +222,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4 tracking-tight">
-              How <span className="font-heed text-indigo-600">Heed </span> Works
+              How <span className="font-heed text-indigo-600">Heeszo </span> Works
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Whether you're shopping or selling, we've got you covered
@@ -241,7 +241,7 @@ export default function LandingPage() {
               <p className="text-gray-600 mb-6">Download our mobile app to discover and purchase unique products</p>
               <div className="space-y-4">
                 {[
-                  { icon: <Download size={20} />, text: "Download the Heed app from App Store or Play Store" },
+                  { icon: <Download size={20} />, text: "Download the Heeszo app from App Store or Play Store" },
                   { icon: <Camera size={20} />, text: "Browse stunning product photos from local sellers" },
                   { icon: <MessageCircle size={20} />, text: "Chat directly with sellers before buying" },
                   { icon: <ShoppingBag size={20} />, text: "Place orders and track delivery in real-time" },
@@ -363,9 +363,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 tracking-tight">About <span className="font-heed text-indigo-600">Heed </span></h2>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-6 tracking-tight">About <span className="font-heed text-indigo-600">Heeszo </span></h2>
               <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                Heed is a complete marketplace ecosystem that connects local sellers with buyers. 
+                Heeszo is a complete marketplace ecosystem that connects local sellers with buyers. 
                 Our mobile app lets you discover and purchase unique products, while our web dashboard 
                 empowers sellers with powerful tools to grow their business.
               </p>
@@ -393,7 +393,7 @@ export default function LandingPage() {
                   <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white" />
                   <img src="https://randomuser.me/api/portraits/women/68.jpg" alt="User" className="w-10 h-10 rounded-full border-2 border-white" />
                 </div>
-                <p className="text-gray-600">Join <span className="font-semibold text-gray-900">50,000+</span> users on <span className="font-heed text-indigo-600">Heed</span></p>
+                <p className="text-gray-600">Join <span className="font-semibold text-gray-900">50,000+</span> users on <span className="font-heed text-indigo-600">Heeszo</span></p>
               </div>
             </div>
 
@@ -413,7 +413,7 @@ export default function LandingPage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Paul Jo</h3>
                 <p className="text-indigo-600 font-medium mb-4">Founder & CEO</p>
                 <p className="text-gray-600 leading-relaxed mb-6">
-                  "We're building <span className="font-heed text-indigo-600">Heed</span> to empower local sellers and create a 
+                  "We're building <span className="font-heed text-indigo-600">Heeszo</span> to empower local sellers and create a 
                   seamless shopping experience. Our vision is to become the go-to marketplace 
                   for discovering unique, quality products from passionate sellers."
                 </p>
@@ -452,7 +452,7 @@ export default function LandingPage() {
                 name: "Sarah Johnson",
                 role: "Fashion Retailer",
                 image: "https://randomuser.me/api/portraits/women/65.jpg",
-                text: "Heed transformed my business. The analytics helped me understand my customers better and increased my sales by 150%."
+                text: "Heeszo transformed my business. The analytics helped me understand my customers better and increased my sales by 150%."
               },
               {
                 name: "Michael Chen",
@@ -491,7 +491,7 @@ export default function LandingPage() {
       <section className="py-20 px-4 bg-gradient-to-r from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-6 tracking-tight">
-            Ready to Join <span className="font-heed">Heed </span>?
+            Ready to Join <span className="font-heed">Heeszo </span>?
           </h2>
           <p className="text-lg text-indigo-100 mb-8 max-w-2xl mx-auto">
             Download our app to start shopping, or sign in to access your seller dashboard.
@@ -529,7 +529,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="font-medium text-white">Email Us</p>
-                    <p className="text-gray-400">support@heed.com</p>
+                    <p className="text-gray-400">support@heeszo.com</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-gray-300">
@@ -610,10 +610,10 @@ export default function LandingPage() {
       <footer className="py-10 px-4 bg-gray-900 border-t border-gray-800">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center">
-            <span className="text-2xl font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Heed </span>
+            <span className="text-2xl font-heed text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Heeszo </span>
           </div>
           <p className="text-gray-500 text-sm">
-            © {new Date().getFullYear()} Heed. All rights reserved.
+            © {new Date().getFullYear()} Heeszo. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm">
             <a href="#" className="text-gray-400 hover:text-white transition">Privacy Policy</a>
@@ -628,8 +628,8 @@ export default function LandingPage() {
           <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-bold text-gray-900">Get Started with <span className="font-heed text-indigo-600">Heed</span></h3>
-                <p className="text-gray-500 mt-1">Choose how you want to use Heed</p>
+                <h3 className="text-2xl font-bold text-gray-900">Get Started with <span className="font-heed text-indigo-600">Heeszo</span></h3>
+                <p className="text-gray-500 mt-1">Choose how you want to use Heeszo</p>
               </div>
               <button onClick={() => setShowGetStartedModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
@@ -680,7 +680,7 @@ export default function LandingPage() {
                       <div className="flex items-start gap-2">
                         <Smartphone className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
                         <div>
-                          <p className="text-amber-800 text-sm font-medium">Sign up on the Heed App first</p>
+                          <p className="text-amber-800 text-sm font-medium">Sign up on the Heeszo App first</p>
                           <p className="text-amber-700 text-xs mt-1">Create your seller account and post products using our mobile app, then access your dashboard here to manage analytics, orders, and ads.</p>
                         </div>
                       </div>

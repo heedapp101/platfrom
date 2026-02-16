@@ -29,7 +29,7 @@ export function PageLoader({ text = "Loading..." }) {
         {/* Logo animation */}
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center animate-bounce">
-            <img src="/logo.png" alt="Heed" className="w-14 h-14 object-contain" />
+            <img src="/logo.png" alt="Heeszo" className="w-14 h-14 object-contain" />
           </div>
           <div className="absolute -inset-2 bg-indigo-400/30 rounded-2xl animate-ping"></div>
         </div>
