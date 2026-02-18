@@ -74,6 +74,10 @@ export default function Sidebar({ collapsed }) {
                <span>🚩</span>
                {!collapsed && <span>Reported Posts</span>}
             </NavLink>
+            <NavLink to={`${basePath}/settings`} className={linkClass}>
+               <span>⚙️</span>
+               {!collapsed && <span>Settings</span>}
+            </NavLink>
           </>
         ) : (
           /* Seller Specific Links */

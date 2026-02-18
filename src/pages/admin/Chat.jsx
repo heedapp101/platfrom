@@ -81,20 +81,28 @@ export default function AdminChat() {
   // Fetch existing chats with history
   const fetchExistingChats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/chat?type=admin`, {
+      const res = await fetch(`${API_BASE_URL}/chat/admin/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
+      
+      const chatList = data.chats || data || [];
       
       // Deduplicate chats by participant - keep only the most recent chat per user
       const uniqueChats = [];
       const seenParticipants = new Set();
       
-      for (const chatItem of (data || [])) {
-        const participantId = chatItem.participant?._id;
+      for (const chatItem of chatList) {
+        // Format participant from populated participants array
+        const participant = chatItem.participant || chatItem.participants?.find(
+          (p) => p._id !== adminUser._id
+        );
+        if (!participant) continue;
+        
+        const participantId = participant._id;
         if (participantId && !seenParticipants.has(participantId)) {
           seenParticipants.add(participantId);
-          uniqueChats.push(chatItem);
+          uniqueChats.push({ ...chatItem, participant });
         }
       }
       
@@ -446,8 +454,8 @@ export default function AdminChat() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {/* Product Context Card */}
-              {chat?.productContext && (
+              {/* Product Context Card - only show for product inquiries, not admin support */}
+              {chat?.productContext?.title && (
                 <div className="bg-white rounded-lg border p-3 flex items-center gap-3 mb-4 shadow-sm">
                   <img
                     src={chat.productContext.image?.startsWith('http') ? chat.productContext.image : `${API_BASE_URL.replace('/api', '')}${chat.productContext.image}`}
@@ -457,7 +465,9 @@ export default function AdminChat() {
                   <div className="flex-1">
                     <p className="text-xs text-gray-500 uppercase font-semibold">Inquiry About</p>
                     <p className="font-semibold text-gray-900 truncate">{chat.productContext.title}</p>
-                    <p className="text-blue-600 font-bold">₹{(chat.productContext.price || 0).toLocaleString()}</p>
+                    {chat.productContext.price > 0 && (
+                      <p className="text-blue-600 font-bold">₹{chat.productContext.price.toLocaleString()}</p>
+                    )}
                   </div>
                 </div>
               )}

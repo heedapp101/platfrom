@@ -13,6 +13,8 @@ export default function SellerAds() {
     message: ""
   });
   const [submitting, setSubmitting] = useState(false);
+  const [boostingPostId, setBoostingPostId] = useState(null);
+  const [unboostingPostId, setUnboostingPostId] = useState(null);
 
   useEffect(() => {
     fetchBoostStatus();
@@ -36,8 +38,10 @@ export default function SellerAds() {
   };
 
   const handleBoost = async (postId) => {
+    if (!postId || boostingPostId) return;
     const token = localStorage.getItem("token");
     try {
+      setBoostingPostId(postId);
       const res = await fetch(`${API_BASE_URL}/images/boost/${postId}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
@@ -52,14 +56,17 @@ export default function SellerAds() {
     } catch (err) {
       console.error("Boost error:", err);
       alert("Failed to boost post");
+    } finally {
+      setBoostingPostId(null);
     }
   };
 
   const handleUnboost = async (postId) => {
     if (!confirm("Are you sure you want to remove the boost from this post?")) return;
-    
+    if (!postId || unboostingPostId) return;
     const token = localStorage.getItem("token");
     try {
+      setUnboostingPostId(postId);
       const res = await fetch(`${API_BASE_URL}/images/boost/${postId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
@@ -69,6 +76,8 @@ export default function SellerAds() {
       }
     } catch (err) {
       console.error("Unboost error:", err);
+    } finally {
+      setUnboostingPostId(null);
     }
   };
 
@@ -77,18 +86,7 @@ export default function SellerAds() {
     setSubmitting(true);
     
     // This would typically send a message to admin via chat or create a support ticket
-    const token = localStorage.getItem("token");
     try {
-      // Send message to admin chat (using existing chat system)
-      const message = `
-📢 AD REQUEST
-
-Type: ${requestForm.type === "in-feed" ? "In-Feed Ad" : "Banner Ad"}
-Duration: ${requestForm.duration.replace("_", " ")}
-Budget: ₹${requestForm.budget}
-
-Message: ${requestForm.message}
-      `.trim();
 
       // For now, we'll just show success - you can integrate with chat system
       alert("Ad request sent successfully! Admin will contact you soon.");
@@ -178,6 +176,7 @@ Message: ${requestForm.message}
                 post={post}
                 daysRemaining={getDaysRemaining(post.boostExpiresAt)}
                 onUnboost={() => handleUnboost(post._id)}
+                unboosting={unboostingPostId === post._id}
               />
             ))}
           </div>
@@ -203,6 +202,7 @@ Message: ${requestForm.message}
               canBoost={post.canBoost && (boostData?.availableSlots || 0) > 0}
               onBoost={() => handleBoost(post._id)}
               daysRemaining={getDaysRemaining(post.boostExpiresAt)}
+              boosting={boostingPostId === post._id}
             />
           ))}
         </div>
@@ -342,7 +342,7 @@ Message: ${requestForm.message}
 }
 
 // Boosted Post Card
-function BoostedPostCard({ post, daysRemaining, onUnboost }) {
+function BoostedPostCard({ post, daysRemaining, onUnboost, unboosting = false }) {
   return (
     <div className="bg-white rounded-xl border-2 border-blue-200 shadow-sm overflow-hidden">
       <div className="flex">
@@ -363,9 +363,10 @@ function BoostedPostCard({ post, daysRemaining, onUnboost }) {
             </div>
             <button
               onClick={onUnboost}
-              className="text-xs text-slate-400 hover:text-red-500"
+              disabled={unboosting}
+              className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Remove
+              {unboosting ? "Removing..." : "Remove"}
             </button>
           </div>
           <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
@@ -383,7 +384,7 @@ function BoostedPostCard({ post, daysRemaining, onUnboost }) {
 }
 
 // Regular Post Card
-function PostCard({ post, canBoost, onBoost, daysRemaining }) {
+function PostCard({ post, canBoost, onBoost, daysRemaining, boosting = false }) {
   const isBoosted = post.isBoosted && daysRemaining > 0;
 
   return (
@@ -413,15 +414,15 @@ function PostCard({ post, canBoost, onBoost, daysRemaining }) {
         {!isBoosted && (
           <button
             onClick={onBoost}
-            disabled={!canBoost}
+            disabled={!canBoost || boosting}
             className={`w-full mt-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-              canBoost
+              canBoost && !boosting
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
           >
             <Rocket size={14} />
-            {canBoost ? "Boost This Post" : "No slots available"}
+            {boosting ? "Boosting..." : canBoost ? "Boost This Post" : "No slots available"}
           </button>
         )}
       </div>
