@@ -19,6 +19,7 @@ import SellerPosts from "./pages/seller/Posts";
 import SellerOrders from "./pages/seller/Orders";
 import SellerAnalytics from "./pages/seller/Analytics";
 import SellerAds from "./pages/seller/Ads";
+import SellerChat from "./pages/seller/Chat";
 import SellerSettings from "./pages/seller/Settings";
 
 /* ADMIN */
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="orders" element={<SellerOrders />} />
         <Route path="analytics" element={<SellerAnalytics />} />
         <Route path="ads" element={<SellerAds />} />
+        <Route path="chat" element={<SellerChat />} />
         <Route path="settings" element={<SellerSettings />} />
       </Route>
 
