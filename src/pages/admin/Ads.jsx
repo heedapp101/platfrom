@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Edit2, Trash2, Eye, MousePointer, DollarSign, Calendar, X, Image, ExternalLink, ToggleLeft, ToggleRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Edit2, Trash2, Eye, MousePointer, DollarSign, Calendar, X, Image, ExternalLink, ToggleLeft, ToggleRight, Loader2 } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
 
 export default function AdminAds() {
@@ -10,12 +10,15 @@ export default function AdminAds() {
   const [editingAd, setEditingAd] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // all, in-feed, banner
   const [imagePreview, setImagePreview] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const submitLockRef = useRef(false);
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     linkUrl: "",
     type: "in-feed",
+    priority: 999,
     startDate: "",
     endDate: "",
     payment: {
@@ -58,6 +61,9 @@ export default function AdminAds() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving || submitLockRef.current) return;
+    submitLockRef.current = true;
+    setSaving(true);
     const token = localStorage.getItem("token");
 
     const formPayload = new FormData();
@@ -65,6 +71,7 @@ export default function AdminAds() {
     formPayload.append("description", formData.description);
     formPayload.append("linkUrl", formData.linkUrl);
     formPayload.append("type", formData.type);
+    formPayload.append("priority", String(formData.priority || 999));
     formPayload.append("startDate", formData.startDate);
     formPayload.append("endDate", formData.endDate);
     formPayload.append("payment", JSON.stringify(formData.payment));
@@ -90,9 +97,16 @@ export default function AdminAds() {
       if (res.ok) {
         fetchAds();
         resetForm();
+      } else {
+        const data = await res.json();
+        alert(data?.message || "Failed to save ad");
       }
     } catch (err) {
       console.error("Failed to save ad:", err);
+      alert("Failed to save ad");
+    } finally {
+      setSaving(false);
+      submitLockRef.current = false;
     }
   };
 
@@ -124,23 +138,6 @@ export default function AdminAds() {
     }
   };
 
-  const handlePaymentUpdate = async (id, status) => {
-    const token = localStorage.getItem("token");
-    try {
-      await fetch(`${API_BASE_URL}/ads/${id}/payment`, {
-        method: "PATCH",
-        headers: { 
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status })
-      });
-      fetchAds();
-    } catch (err) {
-      console.error("Failed to update payment:", err);
-    }
-  };
-
   const openEditModal = (ad) => {
     setEditingAd(ad);
     setFormData({
@@ -148,6 +145,7 @@ export default function AdminAds() {
       description: ad.description || "",
       linkUrl: ad.linkUrl,
       type: ad.type,
+      priority: Number(ad.priority || 999),
       startDate: ad.startDate?.split("T")[0] || "",
       endDate: ad.endDate?.split("T")[0] || "",
       payment: ad.payment || { amount: "", currency: "INR", method: "manual", status: "pending", transactionId: "" },
@@ -163,6 +161,7 @@ export default function AdminAds() {
       description: "",
       linkUrl: "",
       type: "in-feed",
+      priority: 999,
       startDate: "",
       endDate: "",
       payment: { amount: "", currency: "INR", method: "manual", status: "pending", transactionId: "" },
@@ -243,13 +242,12 @@ export default function AdminAds() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {filteredAds.map(ad => (
           <AdCard 
-            key={ad._id} 
-            ad={ad} 
+            key={ad._id}
+            ad={ad}
             isActive={isAdActive(ad)}
             onEdit={() => openEditModal(ad)}
             onDelete={() => handleDelete(ad._id)}
             onToggle={() => handleToggleStatus(ad._id)}
-            onPaymentUpdate={(status) => handlePaymentUpdate(ad._id, status)}
           />
         ))}
       </div>
@@ -314,6 +312,23 @@ export default function AdminAds() {
                       <option value="in-feed">In-Feed Ad</option>
                       <option value="banner">Banner Ad</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">Priority *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.priority}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          priority: Math.max(1, Number(e.target.value || 1)),
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="mt-1 text-xs text-slate-400">1 shows first, then 2, then 3...</p>
                   </div>
 
                   <div>
@@ -503,15 +518,24 @@ export default function AdminAds() {
                 <button
                   type="button"
                   onClick={resetForm}
+                  disabled={saving}
                   className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={saving}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {editingAd ? "Update Ad" : "Create Ad"}
+                  {saving ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      {editingAd ? "Updating..." : "Creating..."}
+                    </>
+                  ) : (
+                    editingAd ? "Update Ad" : "Create Ad"
+                  )}
                 </button>
               </div>
             </form>
@@ -538,7 +562,7 @@ function StatCard({ title, value, icon, color }) {
 }
 
 // Ad Card Component
-function AdCard({ ad, isActive, onEdit, onDelete, onToggle, onPaymentUpdate }) {
+function AdCard({ ad, isActive, onEdit, onDelete, onToggle }) {
   const daysLeft = ad.endDate 
     ? Math.max(0, Math.ceil((new Date(ad.endDate) - new Date()) / (1000 * 60 * 60 * 24)))
     : 0;
@@ -583,6 +607,9 @@ function AdCard({ ad, isActive, onEdit, onDelete, onToggle, onPaymentUpdate }) {
                     : "bg-amber-100 text-amber-700"
                 }`}>
                   {ad.payment?.status?.toUpperCase() || "PENDING"}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded font-medium bg-slate-100 text-slate-700">
+                  P{Number(ad.priority || 999)}
                 </span>
               </div>
             </div>

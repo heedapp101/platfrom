@@ -21,9 +21,10 @@ const STATUS_CONFIG = {
 
 const TABS = [
   { key: "orders", label: "Orders", statuses: "pending,confirmed", statusKeys: ["pending", "confirmed"], icon: ShoppingBag },
-  { key: "shipping", label: "Shipping", statuses: "shipping_initiated,shipped,out_for_delivery", statusKeys: ["shipping_initiated", "shipped"], icon: Truck },
+  { key: "shipping", label: "Shipping", statuses: "shipping_initiated,shipped,out_for_delivery", statusKeys: ["shipping_initiated", "shipped", "out_for_delivery"], icon: Truck },
   { key: "delivered", label: "Delivered", statuses: "delivered", statusKeys: ["delivered"], icon: CheckCircle },
-  { key: "cancelled", label: "Cancelled", statuses: "cancelled,disputed,refund_requested,refunded", statusKeys: ["cancelled", "disputed"], icon: Ban },
+  { key: "disputes", label: "Disputes", statuses: "disputed", statusKeys: ["disputed"], icon: AlertTriangle },
+  { key: "cancelled", label: "Cancelled", statuses: "cancelled,refund_requested,refunded", statusKeys: ["cancelled", "refund_requested", "refunded"], icon: Ban },
 ];
 
 const STATUS_ACTIONS = {
@@ -47,7 +48,18 @@ const STATUS_ACTIONS = {
   delivered: [],
   cancelled: [],
   disputed: [
-    { next: "refunded", label: "Process Refund", color: "bg-orange-600 hover:bg-orange-700 text-white" },
+    {
+      next: "refunded",
+      label: "Process Refund",
+      color: "bg-orange-600 hover:bg-orange-700 text-white",
+      note: "Refund approved by seller after dispute review",
+    },
+    {
+      next: "delivered",
+      label: "Cancel Dispute",
+      color: "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50",
+      note: "Dispute reviewed and closed by seller",
+    },
   ],
   refund_requested: [
     { next: "refunded", label: "Process Refund", color: "bg-orange-600 hover:bg-orange-700 text-white" },
@@ -69,6 +81,7 @@ export default function SellerOrders() {
   const [shippingCarrier, setShippingCarrier] = useState("");
   const [trackingLink, setTrackingLink] = useState("");
   const [estimatedDays, setEstimatedDays] = useState("3");
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const currentTab = TABS.find((t) => t.key === activeTab);
 
@@ -97,6 +110,11 @@ export default function SellerOrders() {
     fetchOrders();
   }, [activeTab]);
 
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleStatusUpdate = async (orderId, newStatus, extraData = {}) => {
     const token = localStorage.getItem("token");
     try {
@@ -117,6 +135,7 @@ export default function SellerOrders() {
         alert(data.message || "Failed to update status");
       }
     } catch (error) {
+      console.error("Error updating order status:", error);
       alert("Error updating order status");
     } finally {
       setUpdating(null);
@@ -150,7 +169,7 @@ export default function SellerOrders() {
     if (action.needsModal) {
       setShipModalOrder(order);
     } else {
-      handleStatusUpdate(order._id, action.next);
+      handleStatusUpdate(order._id, action.next, action.note ? { note: action.note } : {});
     }
   };
 
@@ -294,6 +313,8 @@ export default function SellerOrders() {
               ? "Shipped orders will be listed here"
               : activeTab === "delivered"
               ? "Completed deliveries show here"
+              : activeTab === "disputes"
+              ? "Buyer disputes awaiting your review appear here"
               : "Cancelled or refunded orders appear here"}
           </p>
         </div>
@@ -320,6 +341,7 @@ export default function SellerOrders() {
           onAction={(action) => handleAction(selectedOrder, action)}
           updating={updating}
           formatDateTime={formatDateTime}
+          nowMs={nowMs}
         />
       )}
 
@@ -436,7 +458,7 @@ function OrderCard({ order, onView, onAction, updating, formatDate }) {
 }
 
 /* ───────── Order Detail Modal ───────── */
-function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime }) {
+function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime, nowMs }) {
   const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
   const StatusIcon = statusConfig.icon;
   const actions = STATUS_ACTIONS[order.status] || [];
@@ -551,7 +573,7 @@ function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime }
                 {(() => {
                   const deliveredTime = new Date(order.deliveredAt).getTime();
                   const disputeDeadline = deliveredTime + 24 * 60 * 60 * 1000;
-                  const now = Date.now();
+                  const now = nowMs;
                   const hoursLeft = Math.max(0, Math.ceil((disputeDeadline - now) / (1000 * 60 * 60)));
                   const disputeWindowOpen = now < disputeDeadline;
                   return (

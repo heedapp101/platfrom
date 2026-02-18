@@ -33,6 +33,7 @@ import BoostControl from "./pages/admin/BoostControl";
 import Compliance from "./pages/admin/Compliance";
 import ReportedPosts from "./pages/admin/ReportedPosts";
 import Legal from "./pages/admin/Legal";
+import AdminSettings from "./pages/admin/Settings";
 
 export default function App() {
   return (
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="compliance" element={<Compliance />} />
         <Route path="reports" element={<ReportedPosts />} />
         <Route path="legal" element={<Legal />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
 
       {/* FALLBACK */}
