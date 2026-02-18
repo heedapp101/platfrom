@@ -152,10 +152,30 @@ export default function SellerChat() {
       if (!data?.chatId || data.chatId !== activeChatIdRef.current) return;
       setMessages((prev) => {
         const incoming = data.message;
-        const exists = prev.some((msg) => msg._id === incoming?._id);
-        if (exists) {
-          return prev.map((msg) => (msg._id === incoming._id ? incoming : msg));
+        const incomingId = incoming?._id;
+        const incomingSenderId = incoming?.sender?._id || incoming?.sender;
+        
+        // Check for exact _id match
+        const existsById = prev.some((msg) => msg._id === incomingId);
+        if (existsById) {
+          return prev.map((msg) => (msg._id === incomingId ? incoming : msg));
         }
+        
+        // Check for optimistic message match (same content + sender + recent temp id)
+        const optimisticIndex = prev.findIndex((msg) => {
+          const msgId = msg._id || "";
+          const isTemp = typeof msgId === "string" && msgId.startsWith("temp-");
+          const msgSenderId = msg.sender?._id || msg.sender;
+          return isTemp && msg.content === incoming?.content && msgSenderId === incomingSenderId;
+        });
+        
+        if (optimisticIndex !== -1) {
+          // Replace optimistic message with real one
+          const next = [...prev];
+          next[optimisticIndex] = incoming;
+          return next;
+        }
+        
         return [...prev, incoming];
       });
       socketRef.current?.emit("mark-read", data.chatId);
