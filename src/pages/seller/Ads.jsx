@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Rocket, Clock, Eye, CheckCircle, AlertCircle, MessageSquare, Send, X, Image } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
 
 export default function SellerAds() {
+  const navigate = useNavigate();
   const [boostData, setBoostData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showRequestModal, setShowRequestModal] = useState(false);
@@ -84,19 +86,61 @@ export default function SellerAds() {
   const handleAdRequest = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    
-    // This would typically send a message to admin via chat or create a support ticket
-    try {
 
-      // For now, we'll just show success - you can integrate with chat system
-      alert("Ad request sent successfully! Admin will contact you soon.");
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/chat/support/ad-campaign`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: requestForm.type,
+          duration: requestForm.duration,
+          budget: Number(requestForm.budget),
+          message: requestForm.message.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to send ad request");
+      }
+
+      alert("Ad request sent to support chat");
       setShowRequestModal(false);
       setRequestForm({ type: "in-feed", duration: "1_week", budget: "", message: "" });
+      navigate("/seller/chat", {
+        state: { chatId: data.chatId },
+      });
     } catch (err) {
       console.error("Ad request error:", err);
-      alert("Failed to send request");
+      alert(err.message || "Failed to send request");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openSupportChat = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/chat/support/open`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to open support chat");
+      }
+
+      setShowRequestModal(false);
+      navigate("/seller/chat", {
+        state: { chatId: data.chatId },
+      });
+    } catch (err) {
+      console.error("Support chat error:", err);
+      alert(err.message || "Failed to open support chat");
     }
   };
 
@@ -115,12 +159,20 @@ export default function SellerAds() {
           <h1 className="text-2xl font-bold text-slate-800">Boost & Promote</h1>
           <p className="text-slate-500 text-sm">Boost your posts to reach more customers</p>
         </div>
-        <button
-          onClick={() => setShowRequestModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:opacity-90 transition-opacity"
-        >
-          <MessageSquare size={18} /> Request Ad Campaign
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={openSupportChat}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            <MessageSquare size={18} /> Support Chat
+          </button>
+          <button
+            onClick={() => setShowRequestModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:opacity-90 transition-opacity"
+          >
+            <MessageSquare size={18} /> Request Ad Campaign
+          </button>
+        </div>
       </div>
 
       {/* Boost Slots Overview */}
@@ -265,6 +317,13 @@ export default function SellerAds() {
               <p className="text-slate-500 text-sm">
                 Want premium ad placement? Submit a request and our team will contact you.
               </p>
+              <button
+                type="button"
+                onClick={openSupportChat}
+                className="w-full text-left text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Need direct help? Open Support Chat
+              </button>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ad Type</label>

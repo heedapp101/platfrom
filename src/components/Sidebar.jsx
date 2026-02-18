@@ -102,6 +102,10 @@ export default function Sidebar({ collapsed }) {
               <span>🚀</span>
               {!collapsed && <span>Boost & Ads</span>}
             </NavLink>
+            <NavLink to={`${basePath}/chat`} className={linkClass}>
+              <span>💬</span>
+              {!collapsed && <span>Support Chat</span>}
+            </NavLink>
             <NavLink to={`${basePath}/settings`} className={linkClass}>
               <span>⚙️</span>
               {!collapsed && <span>Settings</span>}
