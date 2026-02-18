@@ -11,6 +11,10 @@ const messages = [
 const getPayment = (type, data) => (type === "post" ? data?.user?.awardPaymentMethod : data?.awardPaymentMethod);
 const statusCls = (s) =>
   s === "paid" ? "bg-green-100 text-green-700" : s === "approved" ? "bg-blue-100 text-blue-700" : s === "rejected" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700";
+const getMethodDisplay = (method) => {
+  if (!method?.type || !method?.value) return "Not set";
+  return method.type === "upi" ? `UPI: ${method.value}` : `Phone: ${method.value}`;
+};
 
 export default function Awards() {
   const [activeTab, setActiveTab] = useState("candidates");
@@ -81,13 +85,12 @@ export default function Awards() {
     setSubmitting(true);
     const token = localStorage.getItem("token");
     try {
-      const hasPayment = !!getPayment(target.type, target.data)?.value;
-      const requestFirst = !hasPayment && form.requestPaymentFirst && !form.editPaymentMethod;
-      const amount = requestFirst ? 0 : form.amount === "" ? undefined : Number(form.amount);
+      const requestFirst = !!form.requestPaymentFirst && !form.editPaymentMethod;
+      const amount = form.amount === "" ? undefined : Number(form.amount);
       if (Number.isFinite(amount) && amount < 0) return alert("Amount must be 0 or greater.");
-      if (form.editPaymentMethod && !form.paymentMethodValue.trim()) return alert("Please enter payment details.");
+      if (form.editPaymentMethod && !form.paymentMethodValue.trim()) return alert("Please enter payment details or turn off payment edit.");
       const endpoint = target.type === "post" ? API_ENDPOINTS.ADMIN.AWARD_POST(target.data._id) : API_ENDPOINTS.ADMIN.AWARD_USER(target.data._id);
-      const payload = { message: form.message, amount, showInFeed: form.showInFeed };
+      const payload = { message: form.message, amount, showInFeed: form.showInFeed, requestPaymentFirst: requestFirst };
       if (form.editPaymentMethod && form.paymentMethodValue.trim()) {
         payload.paymentMethodType = form.paymentMethodType;
         payload.paymentMethodValue = form.paymentMethodValue.trim();
@@ -101,7 +104,7 @@ export default function Awards() {
       if (!res.ok) return alert(data.message || "Failed to award");
       setTarget(null);
       activeTab === "candidates" ? fetchCandidates() : fetchAwards();
-      if (requestFirst) alert("Award request sent. User will add payment method in app.");
+      if (requestFirst) alert("Award request sent. User has been asked to add/update payment details. You can mark it paid after they update.");
     } finally {
       setSubmitting(false);
     }
@@ -173,7 +176,7 @@ function AwardsTable({ awards, onStatus, onVisibility }) {
     <div className="bg-white rounded-xl border overflow-hidden">
       <table className="w-full text-left">
         <thead className="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th className="px-4 py-3">Target</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Search Visibility</th><th className="px-4 py-3">Payment</th></tr></thead>
-        <tbody className="divide-y">{awards.map((a) => { const m = a.paymentMethod || a.targetUser?.awardPaymentMethod || a.targetPost?.user?.awardPaymentMethod; return <tr key={a._id}><td className="px-4 py-3 text-sm">{a.type === "post" ? a.targetPost?.title || "Post" : a.targetUser?.name || a.targetUser?.username}</td><td className="px-4 py-3 text-sm">{a.amount > 0 ? `Rs ${a.amount}` : "-"}</td><td className="px-4 py-3"><select value={a.status} onChange={(e) => onStatus(a._id, e.target.value)} className={`text-xs px-2 py-1 rounded-full ${statusCls(a.status)}`}><option value="pending">Pending</option><option value="approved">Approved</option><option value="paid">Paid</option><option value="rejected">Rejected</option></select></td><td className="px-4 py-3"><button onClick={() => onVisibility(a._id, a.showInFeed)} className={`text-xs px-2 py-1 rounded-full ${a.showInFeed ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{a.showInFeed ? <Eye size={12} className="inline mr-1" /> : <EyeOff size={12} className="inline mr-1" />}{a.showInFeed ? "Visible" : "Hidden"}</button></td><td className="px-4 py-3 text-xs">{m?.value || <span className="text-slate-400"><AlertCircle size={12} className="inline mr-1" />Waiting for user</span>}</td></tr>; })}</tbody>
+        <tbody className="divide-y">{awards.map((a) => { const fallback = a.targetUser?.awardPaymentMethod || a.targetPost?.user?.awardPaymentMethod; const m = a.paymentMethod || (a.status === "pending" ? null : fallback); return <tr key={a._id}><td className="px-4 py-3 text-sm">{a.type === "post" ? a.targetPost?.title || "Post" : a.targetUser?.name || a.targetUser?.username}</td><td className="px-4 py-3 text-sm">{a.amount > 0 ? `Rs ${a.amount}` : "-"}</td><td className="px-4 py-3"><select value={a.status} onChange={(e) => onStatus(a._id, e.target.value)} className={`text-xs px-2 py-1 rounded-full ${statusCls(a.status)}`}><option value="pending">Pending</option><option value="approved">Approved</option><option value="paid">Paid</option><option value="rejected">Rejected</option></select></td><td className="px-4 py-3"><button onClick={() => onVisibility(a._id, a.showInFeed)} className={`text-xs px-2 py-1 rounded-full ${a.showInFeed ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{a.showInFeed ? <Eye size={12} className="inline mr-1" /> : <EyeOff size={12} className="inline mr-1" />}{a.showInFeed ? "Visible" : "Hidden"}</button></td><td className="px-4 py-3 text-xs">{m?.value ? getMethodDisplay(m) : <span className="text-slate-400"><AlertCircle size={12} className="inline mr-1" />Waiting for user update</span>}</td></tr>; })}</tbody>
       </table>
     </div>
   );
@@ -182,17 +185,20 @@ function AwardsTable({ awards, onStatus, onVisibility }) {
 function AwardModal({ target, form, setForm, onClose, onSubmit, submitting }) {
   const payment = getPayment(target.type, target.data);
   const hasPayment = !!(payment?.type && payment?.value);
-  const requestFirst = !hasPayment && form.requestPaymentFirst && !form.editPaymentMethod;
+  const requestFirst = !!form.requestPaymentFirst && !form.editPaymentMethod;
+  const requestPaymentLabel = hasPayment
+    ? "Request user to update payment method first"
+    : "Request user to add payment method first";
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
         <div className="p-4 border-b flex items-center justify-between"><h3 className="font-semibold">Award {target.type === "post" ? "Post" : "User"}</h3><button onClick={onClose}><X size={20} /></button></div>
         <div className="p-4 space-y-3">
           <select className="w-full border rounded-lg p-2" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}>{messages.map((m) => <option key={m} value={m}>{m}</option>)}</select>
-          {!hasPayment && <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={form.requestPaymentFirst} onChange={(e) => setForm({ ...form, requestPaymentFirst: e.target.checked })} /> Request payment method first</label>}
-          {!requestFirst && <input type="number" className="w-full border rounded-lg p-2" placeholder="Award amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />}
+          <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={form.requestPaymentFirst} onChange={(e) => setForm({ ...form, requestPaymentFirst: e.target.checked, editPaymentMethod: e.target.checked ? false : form.editPaymentMethod })} /> {requestPaymentLabel}</label>
+          <input type="number" className="w-full border rounded-lg p-2" placeholder="Award amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
           {hasPayment && !form.editPaymentMethod && <button className="text-xs text-blue-600" onClick={() => setForm({ ...form, editPaymentMethod: true, requestPaymentFirst: false })}>Update payment method ({getMethodDisplay(payment)})</button>}
-          {form.editPaymentMethod && <div className="space-y-2"><select className="w-full border rounded-lg p-2" value={form.paymentMethodType} onChange={(e) => setForm({ ...form, paymentMethodType: e.target.value })}><option value="upi">UPI</option><option value="phone">Phone</option></select><input className="w-full border rounded-lg p-2" placeholder={form.paymentMethodType === "upi" ? "example@oksbi" : "10-digit phone"} value={form.paymentMethodValue} onChange={(e) => setForm({ ...form, paymentMethodValue: e.target.value })} /></div>}
+          {form.editPaymentMethod && <div className="space-y-2"><select className="w-full border rounded-lg p-2" value={form.paymentMethodType} onChange={(e) => setForm({ ...form, paymentMethodType: e.target.value })}><option value="upi">UPI</option><option value="phone">Phone</option></select><input className="w-full border rounded-lg p-2" placeholder={form.paymentMethodType === "upi" ? "example@oksbi" : "10-digit phone"} value={form.paymentMethodValue} onChange={(e) => setForm({ ...form, paymentMethodValue: e.target.value })} /><button className="text-xs text-slate-500" onClick={() => setForm({ ...form, editPaymentMethod: false })}>Turn off payment edit</button></div>}
           <label className="text-sm flex items-center gap-2"><input type="checkbox" checked={form.showInFeed} onChange={(e) => setForm({ ...form, showInFeed: e.target.checked })} /> Show in search/discovery feed</label>
         </div>
         <div className="p-4 border-t flex gap-2"><button onClick={onClose} className="flex-1 py-2 border rounded-lg">Cancel</button><button disabled={submitting} onClick={onSubmit} className="flex-1 py-2 bg-yellow-500 text-white rounded-lg">{submitting ? "Submitting..." : requestFirst ? "Send Award Request" : "Confirm Award"}</button></div>
