@@ -15,6 +15,13 @@ const getMethodDisplay = (method) => {
   if (!method?.type || !method?.value) return "Not set";
   return method.type === "upi" ? `UPI: ${method.value}` : `Phone: ${method.value}`;
 };
+const getPostImage = (post) => {
+  const image = Array.isArray(post?.images) ? post.images[0] : null;
+  if (!image) return "";
+  if (typeof image === "string") return image;
+  return image?.grid || image?.high || image?.low || "";
+};
+const getUserAvatar = (user) => user?.profilePic || "";
 
 export default function Awards() {
   const [activeTab, setActiveTab] = useState("candidates");
@@ -175,9 +182,49 @@ function Candidates({ candidates, onAward }) {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-slate-700 flex items-center gap-2"><Image size={18} /> Top Posts</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{(candidates.topPosts || []).map((p) => <button key={p._id} onClick={() => onAward("post", p)} className="text-left p-4 border rounded-xl hover:bg-slate-50"><p className="font-medium line-clamp-2">{p.title || "Post"}</p><p className="text-xs text-slate-500 mt-1">@{p.user?.username}</p></button>)}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {(candidates.topPosts || []).map((p) => {
+          const imageUrl = getPostImage(p);
+          return (
+            <button key={p._id} onClick={() => onAward("post", p)} className="text-left border rounded-xl overflow-hidden hover:bg-slate-50">
+              <div className="aspect-[16/10] bg-slate-100">
+                {imageUrl ? (
+                  <img src={imageUrl} alt={p.title || "Post"} className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-slate-400"><Image size={20} /></div>
+                )}
+              </div>
+              <div className="p-4">
+                <p className="font-medium line-clamp-2">{p.title || "Post"}</p>
+                <p className="text-xs text-slate-500 mt-1">@{p.user?.username}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
       <h2 className="text-lg font-semibold text-slate-700 flex items-center gap-2"><User size={18} /> Top Users</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">{(candidates.topUsers || []).map((u) => <button key={u._id} onClick={() => onAward("user", u)} className="text-left p-4 border rounded-xl hover:bg-slate-50"><p className="font-medium">{u.name || u.username}</p><p className="text-xs text-slate-500 mt-1">@{u.username}</p></button>)}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {(candidates.topUsers || []).map((u) => {
+          const avatarUrl = getUserAvatar(u);
+          return (
+            <button key={u._id} onClick={() => onAward("user", u)} className="text-left p-4 border rounded-xl hover:bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={u.name || u.username} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <User size={16} className="text-slate-500" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{u.name || u.username}</p>
+                  <p className="text-xs text-slate-500 mt-1 truncate">@{u.username}</p>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -188,7 +235,54 @@ function AwardsTable({ awards, onStatus, onVisibility }) {
     <div className="bg-white rounded-xl border overflow-hidden">
       <table className="w-full text-left">
         <thead className="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th className="px-4 py-3">Target</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Search Visibility</th><th className="px-4 py-3">Payment</th></tr></thead>
-        <tbody className="divide-y">{awards.map((a) => { const fallback = a.targetUser?.awardPaymentMethod || a.targetPost?.user?.awardPaymentMethod; const m = a.paymentMethod || (a.status === "pending" ? null : fallback); return <tr key={a._id}><td className="px-4 py-3 text-sm">{a.type === "post" ? a.targetPost?.title || "Post" : a.targetUser?.name || a.targetUser?.username}</td><td className="px-4 py-3 text-sm">{a.amount > 0 ? `Rs ${a.amount}` : "-"}</td><td className="px-4 py-3"><select value={a.status} onChange={(e) => onStatus(a._id, e.target.value)} className={`text-xs px-2 py-1 rounded-full ${statusCls(a.status)}`}><option value="pending">Pending</option><option value="approved">Approved</option><option value="paid">Paid</option><option value="rejected">Rejected</option></select></td><td className="px-4 py-3"><button onClick={() => onVisibility(a._id, a.showInFeed)} className={`text-xs px-2 py-1 rounded-full ${a.showInFeed ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>{a.showInFeed ? <Eye size={12} className="inline mr-1" /> : <EyeOff size={12} className="inline mr-1" />}{a.showInFeed ? "Visible" : "Hidden"}</button></td><td className="px-4 py-3 text-xs">{m?.value ? getMethodDisplay(m) : <span className="text-slate-400"><AlertCircle size={12} className="inline mr-1" />Waiting for user update</span>}</td></tr>; })}</tbody>
+        <tbody className="divide-y">
+          {awards.map((a) => {
+            const fallback = a.targetUser?.awardPaymentMethod || a.targetPost?.user?.awardPaymentMethod;
+            const m = a.paymentMethod || (a.status === "pending" ? null : fallback);
+            const postImage = getPostImage(a.targetPost);
+            const userAvatar = getUserAvatar(a.targetUser || a.targetPost?.user);
+            const thumb = a.type === "post" ? postImage : userAvatar;
+            const title = a.type === "post" ? a.targetPost?.title || "Post" : a.targetUser?.name || a.targetUser?.username;
+            const subtitle = a.type === "post" ? `@${a.targetPost?.user?.username || "unknown"}` : `@${a.targetUser?.username || "unknown"}`;
+            return (
+              <tr key={a._id}>
+                <td className="px-4 py-3 text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-lg bg-slate-100 overflow-hidden shrink-0 flex items-center justify-center">
+                      {thumb ? (
+                        <img src={thumb} alt={title} className="w-full h-full object-cover" loading="lazy" />
+                      ) : (
+                        <Image size={16} className="text-slate-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{title}</p>
+                      <p className="truncate text-xs text-slate-500">{subtitle}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm">{a.amount > 0 ? `Rs ${a.amount}` : "-"}</td>
+                <td className="px-4 py-3">
+                  <select value={a.status} onChange={(e) => onStatus(a._id, e.target.value)} className={`text-xs px-2 py-1 rounded-full ${statusCls(a.status)}`}>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="paid">Paid</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </td>
+                <td className="px-4 py-3">
+                  <button onClick={() => onVisibility(a._id, a.showInFeed)} className={`text-xs px-2 py-1 rounded-full ${a.showInFeed ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-500"}`}>
+                    {a.showInFeed ? <Eye size={12} className="inline mr-1" /> : <EyeOff size={12} className="inline mr-1" />}
+                    {a.showInFeed ? "Visible" : "Hidden"}
+                  </button>
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  {m?.value ? getMethodDisplay(m) : <span className="text-slate-400"><AlertCircle size={12} className="inline mr-1" />Waiting for user update</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
       </table>
     </div>
   );

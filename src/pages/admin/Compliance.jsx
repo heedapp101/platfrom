@@ -9,15 +9,17 @@ const SEVERITY_CONFIG = {
 };
 
 const SOURCE_CONFIG = {
-  mongodb: { icon: "🍃", label: "MongoDB" },
-  cloudflare: { icon: "☁️", label: "Cloudflare" },
-  "google-vision": { icon: "👁️", label: "Google Vision" },
-  auth: { icon: "🔐", label: "Auth" },
-  payment: { icon: "💳", label: "Payment" },
-  socket: { icon: "🔌", label: "Socket" },
-  api: { icon: "🌐", label: "API" },
-  system: { icon: "⚙️", label: "System" },
-  unknown: { icon: "❓", label: "Unknown" },
+  mongodb: { icon: "\uD83C\uDF43", label: "MongoDB" },
+  cloudflare: { icon: "\u2601\uFE0F", label: "Cloudflare" },
+  "google-vision": { icon: "\uD83D\uDC41\uFE0F", label: "Google Vision" },
+  "gemini-vision": { icon: "\uD83E\uDD16", label: "Gemini Vision" },
+  feature: { icon: "\uD83E\uDDE9", label: "Feature" },
+  auth: { icon: "\uD83D\uDD10", label: "Auth" },
+  payment: { icon: "\uD83D\uDCB3", label: "Payment" },
+  socket: { icon: "\uD83D\uDD0C", label: "Socket" },
+  api: { icon: "\uD83C\uDF10", label: "API" },
+  system: { icon: "\u2699\uFE0F", label: "System" },
+  unknown: { icon: "\u2753", label: "Unknown" },
 };
 
 export default function Compliance() {
@@ -662,11 +664,11 @@ export default function Compliance() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Source</p>
-                  <p>{SOURCE_CONFIG[selectedError.source]?.icon} {SOURCE_CONFIG[selectedError.source]?.label}</p>
+                  <p>{(SOURCE_CONFIG[selectedError.source] || SOURCE_CONFIG.unknown).icon} {(SOURCE_CONFIG[selectedError.source] || SOURCE_CONFIG.unknown).label}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Endpoint</p>
-                  <p className="font-mono text-sm">{selectedError.method} {selectedError.endpoint}</p>
+                  <p className="font-mono text-sm">{selectedError.method || "N/A"} {selectedError.endpoint || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Status Code</p>
@@ -690,6 +692,15 @@ export default function Compliance() {
                   <p className="text-sm text-slate-500 mb-1">Stack Trace</p>
                   <pre className="bg-slate-900 text-slate-100 rounded-lg p-4 text-xs overflow-x-auto">
                     {selectedError.stack}
+                  </pre>
+                </div>
+              )}
+
+              {selectedError.metadata && (
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Metadata</p>
+                  <pre className="bg-slate-100 text-slate-800 rounded-lg p-4 text-xs overflow-x-auto">
+                    {JSON.stringify(selectedError.metadata, null, 2)}
                   </pre>
                 </div>
               )}
