@@ -111,11 +111,23 @@ export default function Awards() {
   };
 
   const updateAward = async (id, body) => {
+    const payload = { ...body };
+    if (payload.status === "paid") {
+      const transactionId = (window.prompt("Enter transaction ID (optional if you add screenshot URL):", "") || "").trim();
+      const screenshotUrl = (window.prompt("Enter payment screenshot URL (optional if transaction ID is added):", "") || "").trim();
+      if (!transactionId && !screenshotUrl) {
+        alert("Add transaction ID or screenshot URL before marking payment completed.");
+        return;
+      }
+      if (transactionId) payload.paymentTransactionId = transactionId;
+      if (screenshotUrl) payload.paymentScreenshotUrl = screenshotUrl;
+    }
+
     const token = localStorage.getItem("token");
     const res = await fetch(API_ENDPOINTS.ADMIN.UPDATE_AWARD(id), {
       method: "PUT",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
