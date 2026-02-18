@@ -22,7 +22,10 @@ export default function Awards() {
   const [awardForm, setAwardForm] = useState({
     message: "",
     amount: "",
-    showInFeed: true
+    showInFeed: true,
+    paymentMethodType: "upi",
+    paymentMethodValue: "",
+    editPaymentMethod: false,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,7 +55,10 @@ export default function Awards() {
       });
       const data = await res.json();
       if (res.ok) {
-        setCandidates(data);
+        setCandidates({
+          topPosts: data.topPosts || data.candidates || [],
+          topUsers: data.topUsers || [],
+        });
       }
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
@@ -84,11 +90,21 @@ export default function Awards() {
   };
 
   const openAwardModal = (type, data) => {
+    const existingPayment =
+      type === "post"
+        ? data?.user?.awardPaymentMethod
+        : data?.awardPaymentMethod;
+
     setAwardTarget({ type, data });
     setAwardForm({
-      message: predefinedMessages[0],
+      message: type === "user"
+        ? "This account has exceptional engagement!"
+        : predefinedMessages[0],
       amount: "",
-      showInFeed: true
+      showInFeed: true,
+      paymentMethodType: existingPayment?.type || "upi",
+      paymentMethodValue: existingPayment?.value || "",
+      editPaymentMethod: !existingPayment?.value,
     });
     setShowAwardModal(true);
   };
@@ -99,9 +115,38 @@ export default function Awards() {
     const token = localStorage.getItem("token");
 
     try {
+      const existingPayment =
+        awardTarget.type === "post"
+          ? awardTarget.data?.user?.awardPaymentMethod
+          : awardTarget.data?.awardPaymentMethod;
+      const hasExistingPayment = !!(existingPayment?.type && existingPayment?.value);
+      const trimmedPaymentValue = awardForm.paymentMethodValue.trim();
+      const amountValue = awardForm.amount ? parseFloat(awardForm.amount) : 0;
+
+      if (awardForm.editPaymentMethod && !trimmedPaymentValue) {
+        alert("Please enter payment details or turn off payment edit.");
+        return;
+      }
+
+      if (amountValue > 0 && !hasExistingPayment && !trimmedPaymentValue) {
+        alert("Add a UPI ID or phone number to pay this award amount.");
+        return;
+      }
+
       const endpoint = awardTarget.type === "post" 
         ? API_ENDPOINTS.ADMIN.AWARD_POST(awardTarget.data._id)
         : API_ENDPOINTS.ADMIN.AWARD_USER(awardTarget.data._id);
+
+      const payload = {
+        message: awardForm.message,
+        amount: awardForm.amount ? parseFloat(awardForm.amount) : undefined,
+        showInFeed: awardForm.showInFeed,
+      };
+
+      if (awardForm.editPaymentMethod && trimmedPaymentValue) {
+        payload.paymentMethodType = awardForm.paymentMethodType;
+        payload.paymentMethodValue = trimmedPaymentValue;
+      }
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -109,11 +154,7 @@ export default function Awards() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          message: awardForm.message,
-          amount: awardForm.amount ? parseFloat(awardForm.amount) : undefined,
-          showInFeed: awardForm.showInFeed
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -193,7 +234,7 @@ export default function Awards() {
 
   // Filter awards by search
   const filteredAwards = awards.filter(award => {
-    const targetName = award.targetPost?.caption || award.targetUser?.name || "";
+    const targetName = award.targetPost?.title || award.targetPost?.caption || award.targetUser?.name || "";
     const username = award.targetUser?.username || award.targetPost?.user?.username || "";
     return targetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
            username.toLowerCase().includes(searchTerm.toLowerCase());
@@ -343,7 +384,7 @@ function CandidatesView({ candidates, onAward }) {
                 <div className="aspect-video relative bg-slate-100">
                   {post.images?.[0] && (
                     <img 
-                      src={getDocumentUrl(post.images[0]?.highQualityUrl || post.images[0]?.url)} 
+                      src={getDocumentUrl(post.images[0]?.high || post.images[0]?.low || post.images[0]?.url)} 
                       alt="" 
                       className="w-full h-full object-cover"
                     />
@@ -355,7 +396,7 @@ function CandidatesView({ candidates, onAward }) {
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-sm text-slate-600 line-clamp-2 mb-2">{post.caption || "No caption"}</p>
+                  <p className="text-sm text-slate-600 line-clamp-2 mb-2">{post.title || "No title"}</p>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
                       {post.user?.profilePic ? (
@@ -369,18 +410,28 @@ function CandidatesView({ candidates, onAward }) {
                     <span className="text-xs text-slate-500">@{post.user?.username}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
-                    <span>❤️ {post.likes?.length || 0}</span>
-                    <span>💬 {post.comments?.length || 0}</span>
-                    <span>📊 {post.engagementScore || 0}</span>
+                    <span>Likes {post.likesCount || 0}</span>
+                    <span>Comments {post.commentsCount || 0}</span>
+                    <span>Score {post.engagementScore || 0}</span>
                   </div>
-                  {!post.isAwarded && (
-                    <button
-                      onClick={() => onAward("post", post)}
-                      className="w-full py-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-lg font-medium hover:from-yellow-500 hover:to-orange-500 transition-all flex items-center justify-center gap-2"
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`/post/${post._id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-2 border border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-all text-center text-sm"
                     >
-                      <Award size={16} /> Award This Post
-                    </button>
-                  )}
+                      View Post
+                    </a>
+                    {!post.isAwarded && (
+                      <button
+                        onClick={() => onAward("post", post)}
+                        className="flex-1 py-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-lg font-medium hover:from-yellow-500 hover:to-orange-500 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Award size={16} /> Award
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -410,7 +461,7 @@ function CandidatesView({ candidates, onAward }) {
                       </span>
                     )}
                   </div>
-                  <h3 className="font-semibold text-slate-700">{user.name}</h3>
+                  <h3 className="font-semibold text-slate-700">{user.name || user.username}</h3>
                   <p className="text-xs text-slate-400 mb-2">@{user.username}</p>
                   {user.isAwarded && (
                     <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-medium mb-2">
@@ -419,7 +470,7 @@ function CandidatesView({ candidates, onAward }) {
                   )}
                   <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
                     <span>📸 {user.postCount || 0} posts</span>
-                    <span>⭐ {user.couponScore || 0} pts</span>
+                    <span>Score {user.engagementScore || user.couponScore || 0}</span>
                   </div>
                   {!user.isAwarded && (
                     <button
@@ -482,15 +533,15 @@ function AwardsListView({ awards, onToggleVisibility, onUpdateStatus, onDelete }
                       <div className="w-12 h-12 rounded-lg bg-slate-200 overflow-hidden">
                         {award.targetPost?.images?.[0] && (
                           <img 
-                            src={getDocumentUrl(award.targetPost.images[0]?.lowQualityUrl || award.targetPost.images[0]?.url)} 
+                            src={getDocumentUrl(award.targetPost.images[0]?.low || award.targetPost.images[0]?.high || award.targetPost.images[0]?.url)} 
                             alt="" 
                             className="w-full h-full object-cover"
                           />
                         )}
                       </div>
                       <div>
-                        <p className="text-sm text-slate-700 line-clamp-1">{award.targetPost?.caption || "No caption"}</p>
-                        <p className="text-xs text-slate-400">by @{award.targetPost?.user?.username}</p>
+                        <p className="text-sm text-slate-700 line-clamp-1">{award.targetPost?.title || award.targetPost?.caption || "No title"}</p>
+                        <p className="text-xs text-slate-400">by @{award.targetPost?.user?.username || award.targetUser?.username}</p>
                       </div>
                     </>
                   ) : (
@@ -505,7 +556,7 @@ function AwardsListView({ awards, onToggleVisibility, onUpdateStatus, onDelete }
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-700">{award.targetUser?.name}</p>
+                        <p className="text-sm font-medium text-slate-700">{award.targetUser?.name || award.targetUser?.username}</p>
                         <p className="text-xs text-slate-400">@{award.targetUser?.username}</p>
                       </div>
                     </>
@@ -552,29 +603,27 @@ function AwardsListView({ awards, onToggleVisibility, onUpdateStatus, onDelete }
                 </button>
               </td>
               <td className="px-6 py-4">
-                {award.type === "user" && award.targetUser?.awardPaymentMethod ? (
-                  <div className="flex items-center gap-1 text-xs text-slate-600">
-                    {award.targetUser.awardPaymentMethod.type === "upi" ? (
-                      <CreditCard size={12} />
-                    ) : (
-                      <Phone size={12} />
-                    )}
-                    <span>{award.targetUser.awardPaymentMethod.value}</span>
-                  </div>
-                ) : award.type === "post" && award.targetPost?.user?.awardPaymentMethod ? (
-                  <div className="flex items-center gap-1 text-xs text-slate-600">
-                    {award.targetPost.user.awardPaymentMethod.type === "upi" ? (
-                      <CreditCard size={12} />
-                    ) : (
-                      <Phone size={12} />
-                    )}
-                    <span>{award.targetPost.user.awardPaymentMethod.value}</span>
-                  </div>
-                ) : (
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <AlertCircle size={12} /> Not set
-                  </span>
-                )}
+                {(() => {
+                  const method =
+                    award.paymentMethod ||
+                    award.targetUser?.awardPaymentMethod ||
+                    award.targetPost?.user?.awardPaymentMethod;
+
+                  if (!method?.value) {
+                    return (
+                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <AlertCircle size={12} /> Not set
+                      </span>
+                    );
+                  }
+
+                  return (
+                    <div className="flex items-center gap-1 text-xs text-slate-600">
+                      {method.type === "upi" ? <CreditCard size={12} /> : <Phone size={12} />}
+                      <span>{method.value}</span>
+                    </div>
+                  );
+                })()}
               </td>
               <td className="px-6 py-4 text-right">
                 <button
@@ -595,6 +644,10 @@ function AwardsListView({ awards, onToggleVisibility, onUpdateStatus, onDelete }
 // Award Modal Component
 function AwardModal({ target, form, setForm, predefinedMessages, onClose, onSubmit, submitting }) {
   const isPost = target.type === "post";
+  const existingPayment = isPost
+    ? target.data?.user?.awardPaymentMethod
+    : target.data?.awardPaymentMethod;
+  const hasExistingPayment = !!(existingPayment?.type && existingPayment?.value);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -619,18 +672,18 @@ function AwardModal({ target, form, setForm, predefinedMessages, onClose, onSubm
               <div className="w-20 h-20 rounded-lg bg-slate-200 overflow-hidden shrink-0">
                 {target.data.images?.[0] && (
                   <img 
-                    src={getDocumentUrl(target.data.images[0]?.lowQualityUrl || target.data.images[0]?.url)} 
+                    src={getDocumentUrl(target.data.images[0]?.low || target.data.images[0]?.high || target.data.images[0]?.url)} 
                     alt="" 
                     className="w-full h-full object-cover"
                   />
                 )}
               </div>
               <div>
-                <p className="text-sm text-slate-700 line-clamp-2">{target.data.caption || "No caption"}</p>
+                <p className="text-sm text-slate-700 line-clamp-2">{target.data.title || "No title"}</p>
                 <p className="text-xs text-slate-400 mt-1">by @{target.data.user?.username}</p>
                 <div className="flex gap-3 mt-2 text-xs text-slate-500">
-                  <span>❤️ {target.data.likes?.length || 0}</span>
-                  <span>💬 {target.data.comments?.length || 0}</span>
+                  <span>Likes {target.data.likesCount || 0}</span>
+                  <span>Comments {target.data.commentsCount || 0}</span>
                 </div>
               </div>
             </div>
@@ -646,9 +699,9 @@ function AwardModal({ target, form, setForm, predefinedMessages, onClose, onSubm
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-slate-700">{target.data.name}</h3>
+                <h3 className="font-semibold text-slate-700">{target.data.name || target.data.username}</h3>
                 <p className="text-sm text-slate-400">@{target.data.username}</p>
-                <p className="text-xs text-slate-500 mt-1">⭐ {target.data.couponScore || 0} points</p>
+                <p className="text-xs text-slate-500 mt-1">Score {target.data.engagementScore || target.data.couponScore || 0}</p>
               </div>
             </div>
           )}
@@ -693,7 +746,7 @@ function AwardModal({ target, form, setForm, predefinedMessages, onClose, onSubm
               Award Amount (Optional)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-2.5 text-slate-400">₹</span>
+              <span className="absolute left-3 top-2.5 text-slate-400">Rs</span>
               <input
                 type="number"
                 placeholder="Enter amount"
@@ -702,6 +755,82 @@ function AwardModal({ target, form, setForm, predefinedMessages, onClose, onSubm
                 className="w-full pl-8 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
               />
             </div>
+          </div>
+
+          {/* Payment Method */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              {form.paymentMethodType === "phone" ? <Phone size={14} className="inline mr-1" /> : <CreditCard size={14} className="inline mr-1" />}
+              Payment Method
+            </label>
+
+            {hasExistingPayment && !form.editPaymentMethod ? (
+              <div className="p-3 border border-slate-200 rounded-lg bg-slate-50">
+                <p className="text-sm text-slate-700">
+                  Current: <span className="font-medium">{existingPayment.type.toUpperCase()} - {existingPayment.value}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, editPaymentMethod: true })}
+                  className="mt-2 text-xs font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Edit payment method
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, paymentMethodType: "upi" })}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium border ${
+                      form.paymentMethodType === "upi"
+                        ? "bg-blue-50 border-blue-300 text-blue-700"
+                        : "bg-white border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    UPI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, paymentMethodType: "phone" })}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium border ${
+                      form.paymentMethodType === "phone"
+                        ? "bg-blue-50 border-blue-300 text-blue-700"
+                        : "bg-white border-slate-200 text-slate-600"
+                    }`}
+                  >
+                    Phone
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  value={form.paymentMethodValue}
+                  onChange={(e) => setForm({ ...form, paymentMethodValue: e.target.value })}
+                  placeholder={form.paymentMethodType === "upi" ? "example@oksbi" : "10-digit phone"}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                />
+
+                {hasExistingPayment && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        editPaymentMethod: false,
+                        paymentMethodType: existingPayment.type,
+                        paymentMethodValue: existingPayment.value,
+                      })
+                    }
+                    className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                  >
+                    Use existing payment method
+                  </button>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-slate-400 mt-2">If already set, you do not need to add it again.</p>
           </div>
 
           {/* Show in Feed Toggle */}
