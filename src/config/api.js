@@ -47,6 +47,14 @@ export const API_ENDPOINTS = {
     BAN_USER: (userId) => `${API_BASE_URL}/admin/user-reports/user/${userId}`,
     PROFILE: `${API_BASE_URL}/admin/profile`,
     UPDATE_PROFILE: `${API_BASE_URL}/admin/profile`,
+    // Awards endpoints
+    AWARDS_CANDIDATES: `${API_BASE_URL}/admin/awards/candidates`,
+    AWARDS_ALL: `${API_BASE_URL}/admin/awards/all`,
+    AWARD_POST: (postId) => `${API_BASE_URL}/admin/awards/post/${postId}`,
+    AWARD_USER: (userId) => `${API_BASE_URL}/admin/awards/user/${userId}`,
+    UPDATE_AWARD: (awardId) => `${API_BASE_URL}/admin/awards/manage/${awardId}`,
+    DELETE_AWARD: (awardId) => `${API_BASE_URL}/admin/awards/manage/${awardId}`,
+    AWARDED_PUBLIC: `${API_BASE_URL}/admin/awards/public`,
   },
   LEGAL: {
     LIST: `${API_BASE_URL}/legal/admin`,
