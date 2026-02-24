@@ -5,6 +5,100 @@ import { API_BASE_URL } from "../../config/api";
 
 const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
+const toMediaUrl = (value) => {
+  if (!value) return "";
+  if (/^(https?:\/\/|data:|blob:)/i.test(value)) return value;
+  return `${SOCKET_URL}${value.startsWith("/") ? value : `/${value}`}`;
+};
+
+const getInitials = (value = "") =>
+  String(value)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "U";
+
+function AvatarWithPlaceholder({
+  src,
+  name,
+  sizeClass = "w-10 h-10",
+  textClass = "text-xs",
+}) {
+  const [status, setStatus] = useState(src ? "loading" : "fallback");
+
+  useEffect(() => {
+    setStatus(src ? "loading" : "fallback");
+  }, [src]);
+
+  return (
+    <div
+      className={`relative ${sizeClass} rounded-full overflow-hidden bg-slate-100 flex items-center justify-center shrink-0`}
+    >
+      {status === "loading" && <div className="absolute inset-0 animate-pulse bg-slate-200" />}
+      {src ? (
+        <img
+          src={src}
+          alt={name || "User"}
+          loading="lazy"
+          onLoad={() => setStatus("loaded")}
+          onError={() => setStatus("fallback")}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            status === "loaded" ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ) : null}
+      {status === "fallback" && (
+        <span className={`font-semibold text-slate-600 ${textClass}`}>
+          {getInitials(name)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SidebarSkeleton() {
+  return (
+    <div className="p-3 space-y-3">
+      {Array.from({ length: 7 }).map((_, idx) => (
+        <div key={`sidebar-skeleton-${idx}`} className="flex items-center gap-3 p-2">
+          <div className="w-11 h-11 rounded-full bg-slate-200 animate-pulse shrink-0" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="h-3 w-2/3 bg-slate-200 rounded animate-pulse" />
+            <div className="h-3 w-5/6 bg-slate-200 rounded animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MessageSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 7 }).map((_, idx) => {
+        const isRight = idx % 2 === 0;
+        return (
+          <div
+            key={`message-skeleton-${idx}`}
+            className={`flex ${isRight ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`rounded-2xl px-4 py-3 animate-pulse ${
+                isRight ? "w-56 bg-blue-100" : "w-64 bg-slate-200"
+              }`}
+            >
+              <div className="h-3 w-4/5 bg-white/70 rounded" />
+              <div className="h-3 w-2/5 bg-white/70 rounded mt-2" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AdminChat() {
   const location = useLocation();
   const [users, setUsers] = useState([]);
@@ -13,7 +107,9 @@ export default function AdminChat() {
   const [chat, setChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingChats, setLoadingChats] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -80,6 +176,7 @@ export default function AdminChat() {
 
   // Fetch existing chats with history
   const fetchExistingChats = useCallback(async () => {
+    setLoadingChats(true);
     try {
       const res = await fetch(`${API_BASE_URL}/chat/admin/all`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -109,11 +206,14 @@ export default function AdminChat() {
       setExistingChats(uniqueChats);
     } catch (error) {
       console.error("Error fetching existing chats:", error);
+    } finally {
+      setLoadingChats(false);
     }
-  }, [token]);
+  }, [token, adminUser._id]);
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
     try {
       const res = await fetch(`${API_BASE_URL}/admin/users?limit=100`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -123,7 +223,7 @@ export default function AdminChat() {
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
-      setLoading(false);
+      setLoadingUsers(false);
     }
   }, [token]);
 
@@ -141,6 +241,7 @@ export default function AdminChat() {
 
   // Open existing chat from history
   const openExistingChat = async (chatItem) => {
+    setLoadingMessages(true);
     try {
       const chatRes = await fetch(`${API_BASE_URL}/chat/${chatItem._id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -155,6 +256,8 @@ export default function AdminChat() {
       socketRef.current?.emit("join-chat", chatItem._id);
     } catch (error) {
       console.error("Error opening chat:", error);
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
@@ -162,6 +265,7 @@ export default function AdminChat() {
   const startChat = async (user) => {
     setSelectedUser(user);
     setMessages([]);
+    setLoadingMessages(true);
     
     try {
       const res = await fetch(`${API_BASE_URL}/chat/admin/initiate`, {
@@ -193,6 +297,8 @@ export default function AdminChat() {
       fetchExistingChats();
     } catch (error) {
       console.error("Error starting chat:", error);
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
@@ -282,6 +388,8 @@ export default function AdminChat() {
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
+  const sidebarLoading = viewMode === "chats" ? loadingChats : loadingUsers;
+
   return (
     <div className="flex h-[calc(100vh-80px)] bg-gray-50 rounded-lg overflow-hidden">
       {/* Sidebar */}
@@ -319,10 +427,8 @@ export default function AdminChat() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
-            </div>
+          {sidebarLoading ? (
+            <SidebarSkeleton />
           ) : viewMode === "chats" ? (
             // Chat History View
             filteredChats.length === 0 ? (
@@ -343,10 +449,11 @@ export default function AdminChat() {
                   }`}
                 >
                   <div className="relative">
-                    <img
-                      src={chatItem.participant?.profilePic || `https://ui-avatars.com/api/?name=${chatItem.participant?.name || chatItem.participant?.username}`}
-                      alt={chatItem.participant?.name}
-                      className="w-12 h-12 rounded-full object-cover"
+                    <AvatarWithPlaceholder
+                      src={toMediaUrl(chatItem.participant?.profilePic)}
+                      name={chatItem.participant?.name || chatItem.participant?.username}
+                      sizeClass="w-12 h-12"
+                      textClass="text-sm"
                     />
                     {chatItem.participant?.userType === "business" && (
                       <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
@@ -391,10 +498,10 @@ export default function AdminChat() {
                   }`}
                 >
                   <div className="relative">
-                    <img
-                      src={user.profilePic || `https://ui-avatars.com/api/?name=${user.name || user.username}`}
-                      alt={user.name}
-                      className="w-10 h-10 rounded-full object-cover"
+                    <AvatarWithPlaceholder
+                      src={toMediaUrl(user.profilePic)}
+                      name={user.name || user.username}
+                      sizeClass="w-10 h-10"
                     />
                     {user.userType === "business" && (
                     <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
@@ -430,10 +537,10 @@ export default function AdminChat() {
           <>
             {/* Chat Header */}
             <div className="flex items-center gap-3 p-4 bg-white border-b">
-              <img
-                src={selectedUser.profilePic || `https://ui-avatars.com/api/?name=${selectedUser.name}`}
-                alt={selectedUser.name}
-                className="w-10 h-10 rounded-full object-cover"
+              <AvatarWithPlaceholder
+                src={toMediaUrl(selectedUser.profilePic)}
+                name={selectedUser.name || selectedUser.username}
+                sizeClass="w-10 h-10"
               />
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900">{selectedUser.name || selectedUser.username}</h3>
@@ -455,7 +562,7 @@ export default function AdminChat() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
               {/* Product Context Card - only show for product inquiries, not admin support */}
-              {chat?.productContext?.title && (
+              {!loadingMessages && chat?.productContext?.title && (
                 <div className="bg-white rounded-lg border p-3 flex items-center gap-3 mb-4 shadow-sm">
                   <img
                     src={chat.productContext.image?.startsWith('http') ? chat.productContext.image : `${API_BASE_URL.replace('/api', '')}${chat.productContext.image}`}
@@ -472,7 +579,9 @@ export default function AdminChat() {
                 </div>
               )}
               
-              {messages.length === 0 ? (
+              {loadingMessages ? (
+                <MessageSkeleton />
+              ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
                   <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
