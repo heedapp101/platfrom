@@ -197,7 +197,7 @@ export default function SellerOrders() {
   };
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto">
+    <div className="space-y-5 w-full">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

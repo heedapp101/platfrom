@@ -8,6 +8,98 @@ import { useAuth } from "../../context/AuthContext";
 const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
 const toSenderId = (sender) => (typeof sender === "object" ? sender?._id : sender);
+const toMediaUrl = (value) => {
+  if (!value) return "";
+  if (/^(https?:\/\/|data:|blob:)/i.test(value)) return value;
+  return `${SOCKET_URL}${value.startsWith("/") ? value : `/${value}`}`;
+};
+const getInitials = (value = "") =>
+  String(value)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "U";
+
+function AvatarWithPlaceholder({
+  src,
+  name,
+  sizeClass = "w-10 h-10",
+  textClass = "text-xs",
+}) {
+  const [status, setStatus] = useState(src ? "loading" : "fallback");
+
+  useEffect(() => {
+    setStatus(src ? "loading" : "fallback");
+  }, [src]);
+
+  return (
+    <div
+      className={`relative ${sizeClass} rounded-full overflow-hidden bg-slate-100 flex items-center justify-center shrink-0`}
+    >
+      {status === "loading" && <div className="absolute inset-0 animate-pulse bg-slate-200" />}
+      {src ? (
+        <img
+          src={src}
+          alt={name || "User"}
+          loading="lazy"
+          onLoad={() => setStatus("loaded")}
+          onError={() => setStatus("fallback")}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            status === "loaded" ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ) : null}
+      {status === "fallback" && (
+        <span className={`font-semibold text-slate-600 ${textClass}`}>
+          {getInitials(name)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function ChatListSkeleton() {
+  return (
+    <div className="p-3 space-y-3">
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <div key={`chat-skel-${idx}`} className="flex items-center gap-3 p-2">
+          <div className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="h-3 w-1/2 bg-slate-200 rounded animate-pulse" />
+            <div className="h-3 w-4/5 bg-slate-200 rounded animate-pulse" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MessageSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 6 }).map((_, idx) => {
+        const isRight = idx % 2 === 0;
+        return (
+          <div
+            key={`msg-skel-${idx}`}
+            className={`flex ${isRight ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`rounded-2xl px-4 py-3 ${
+                isRight ? "w-56 bg-blue-100" : "w-64 bg-slate-200"
+              } animate-pulse`}
+            >
+              <div className="h-3 bg-white/70 rounded w-4/5" />
+              <div className="h-3 bg-white/70 rounded w-2/5 mt-2" />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function SellerChat() {
   const location = useLocation();
@@ -44,6 +136,7 @@ export default function SellerChat() {
 
   const fetchChats = useCallback(async () => {
     if (!token) return;
+    setLoadingChats(true);
     try {
       const res = await fetch(`${API_BASE_URL}/chat?type=admin&scope=all`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -313,7 +406,7 @@ export default function SellerChat() {
 
         <div className="flex-1 overflow-y-auto">
           {loadingChats ? (
-            <div className="p-6 text-sm text-slate-500">Loading chats...</div>
+            <ChatListSkeleton />
           ) : chats.length === 0 ? (
             <div className="p-6 text-sm text-slate-500 space-y-3">
               <p>No support chat yet.</p>
@@ -334,20 +427,29 @@ export default function SellerChat() {
                   activeChatId === chatItem._id ? "bg-blue-50" : ""
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-slate-800 truncate">{getChatTitle(chatItem)}</p>
-                  <span className="text-xs text-slate-400">
-                    {formatTime(chatItem?.lastMessage?.createdAt || chatItem?.updatedAt)}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <AvatarWithPlaceholder
+                    src={toMediaUrl(chatItem?.participant?.profilePic)}
+                    name={getChatTitle(chatItem)}
+                    sizeClass="w-10 h-10"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-slate-800 truncate">{getChatTitle(chatItem)}</p>
+                      <span className="text-xs text-slate-400 shrink-0">
+                        {formatTime(chatItem?.lastMessage?.createdAt || chatItem?.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      {chatItem?.lastMessage?.content || "No messages yet"}
+                    </p>
+                    {chatItem?.unreadCount > 0 && (
+                      <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-blue-600 text-white rounded-full">
+                        {chatItem.unreadCount} new
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500 mt-1 truncate">
-                  {chatItem?.lastMessage?.content || "No messages yet"}
-                </p>
-                {chatItem?.unreadCount > 0 && (
-                  <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-blue-600 text-white rounded-full">
-                    {chatItem.unreadCount} new
-                  </span>
-                )}
               </button>
             ))
           )}
@@ -368,18 +470,27 @@ export default function SellerChat() {
           </div>
         ) : (
           <>
-            <header className="px-4 py-3 bg-white border-b">
-              <p className="font-semibold text-slate-800">
-                {otherParticipant?.name ||
-                  otherParticipant?.username ||
-                  "Support Team"}
-              </p>
-              <p className="text-xs text-slate-500">{isTyping ? "typing..." : "Online support channel"}</p>
+            <header className="px-4 py-3 bg-white border-b flex items-center gap-3">
+              <AvatarWithPlaceholder
+                src={toMediaUrl(otherParticipant?.profilePic)}
+                name={otherParticipant?.name || otherParticipant?.username || "Support Team"}
+                sizeClass="w-10 h-10"
+              />
+              <div className="min-w-0">
+                <p className="font-semibold text-slate-800 truncate">
+                  {otherParticipant?.name ||
+                    otherParticipant?.username ||
+                    "Support Team"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {isTyping ? "typing..." : "Online support channel"}
+                </p>
+              </div>
             </header>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50">
               {loadingMessages ? (
-                <p className="text-sm text-slate-500">Loading messages...</p>
+                <MessageSkeleton />
               ) : messages.length === 0 ? (
                 <p className="text-sm text-slate-500">No messages yet. Send a message to support.</p>
               ) : (
