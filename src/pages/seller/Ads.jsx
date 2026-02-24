@@ -1,7 +1,96 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Rocket, Clock, Eye, CheckCircle, AlertCircle, MessageSquare, Send, X, Image } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
+
+// Memoized Boosted Post Card
+const BoostedPostCard = memo(function BoostedPostCard({ post, daysRemaining, onUnboost, unboosting = false }) {
+  return (
+    <div className="bg-white rounded-xl border-2 border-blue-200 shadow-sm overflow-hidden">
+      <div className="flex">
+        <div className="w-24 h-24 bg-slate-100 flex-shrink-0">
+          {post.images?.[0]?.low && (
+            <img src={post.images[0].low} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+          )}
+        </div>
+        <div className="flex-1 p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <h4 className="font-bold text-slate-800 line-clamp-1">{post.title}</h4>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <Rocket size={12} /> Boosted
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={onUnboost}
+              disabled={unboosting}
+              className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {unboosting ? "Removing..." : "Remove"}
+            </button>
+          </div>
+          <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+            <span className="flex items-center gap-1">
+              <Eye size={12} /> {post.boostViews || 0} boost views
+            </span>
+            <span className={`flex items-center gap-1 ${daysRemaining <= 2 ? "text-amber-600" : ""}`}>
+              <Clock size={12} /> {daysRemaining} days left
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// Memoized Regular Post Card
+const PostCard = memo(function PostCard({ post, canBoost, onBoost, daysRemaining, boosting = false }) {
+  const isBoosted = post.isBoosted && daysRemaining > 0;
+
+  return (
+    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${
+      isBoosted ? "border-blue-200" : "border-slate-100"
+    }`}>
+      <div className="aspect-square bg-slate-100 relative">
+        {post.images?.[0]?.low && (
+          <img src={post.images[0].low} alt={post.title} className="w-full h-full object-cover" loading="lazy" />
+        )}
+        {isBoosted && (
+          <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+            <Rocket size={10} /> Boosted
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <h4 className="font-medium text-slate-800 line-clamp-1">{post.title}</h4>
+        <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
+          <span className="flex items-center gap-1"><Eye size={12} /> {post.views || 0}</span>
+          {isBoosted && (
+            <span className="flex items-center gap-1 text-blue-600">
+              <Clock size={12} /> {daysRemaining}d left
+            </span>
+          )}
+        </div>
+        {!isBoosted && (
+          <button
+            onClick={onBoost}
+            disabled={!canBoost || boosting}
+            className={`w-full mt-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+              canBoost && !boosting
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
+          >
+            <Rocket size={14} />
+            {boosting ? "Boosting..." : canBoost ? "Boost This Post" : "No slots available"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+});
 
 export default function SellerAds() {
   const navigate = useNavigate();
@@ -18,12 +107,9 @@ export default function SellerAds() {
   const [boostingPostId, setBoostingPostId] = useState(null);
   const [unboostingPostId, setUnboostingPostId] = useState(null);
 
-  useEffect(() => {
-    fetchBoostStatus();
-  }, []);
+  const token = useMemo(() => localStorage.getItem("token"), []);
 
-  const fetchBoostStatus = async () => {
-    const token = localStorage.getItem("token");
+  const fetchBoostStatus = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/images/boost/status`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -37,11 +123,14 @@ export default function SellerAds() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const handleBoost = async (postId) => {
+  useEffect(() => {
+    fetchBoostStatus();
+  }, [fetchBoostStatus]);
+
+  const handleBoost = useCallback(async (postId) => {
     if (!postId || boostingPostId) return;
-    const token = localStorage.getItem("token");
     try {
       setBoostingPostId(postId);
       const res = await fetch(`${API_BASE_URL}/images/boost/${postId}`, {
@@ -61,12 +150,11 @@ export default function SellerAds() {
     } finally {
       setBoostingPostId(null);
     }
-  };
+  }, [token, boostingPostId, fetchBoostStatus]);
 
-  const handleUnboost = async (postId) => {
+  const handleUnboost = useCallback(async (postId) => {
     if (!confirm("Are you sure you want to remove the boost from this post?")) return;
     if (!postId || unboostingPostId) return;
-    const token = localStorage.getItem("token");
     try {
       setUnboostingPostId(postId);
       const res = await fetch(`${API_BASE_URL}/images/boost/${postId}`, {
@@ -81,13 +169,12 @@ export default function SellerAds() {
     } finally {
       setUnboostingPostId(null);
     }
-  };
+  }, [token, unboostingPostId, fetchBoostStatus]);
 
-  const handleAdRequest = async (e) => {
+  const handleAdRequest = useCallback(async (e) => {
     e.preventDefault();
     setSubmitting(true);
 
-    const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_BASE_URL}/chat/support/ad-campaign`, {
         method: "POST",
@@ -120,10 +207,9 @@ export default function SellerAds() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [token, requestForm, navigate]);
 
-  const openSupportChat = async () => {
-    const token = localStorage.getItem("token");
+  const openSupportChat = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/chat/support/open`, {
         method: "POST",
@@ -142,12 +228,15 @@ export default function SellerAds() {
       console.error("Support chat error:", err);
       alert(err.message || "Failed to open support chat");
     }
-  };
+  }, [token, navigate]);
 
-  const getDaysRemaining = (expiresAt) => {
+  const getDaysRemaining = useCallback((expiresAt) => {
     if (!expiresAt) return 0;
     return Math.max(0, Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24)));
-  };
+  }, []);
+
+  const handleCloseModal = useCallback(() => setShowRequestModal(false), []);
+  const handleOpenModal = useCallback(() => setShowRequestModal(true), []);
 
   if (loading) return <div className="p-6 text-slate-500">Loading...</div>;
 
@@ -167,7 +256,7 @@ export default function SellerAds() {
             <MessageSquare size={18} /> Support Chat
           </button>
           <button
-            onClick={() => setShowRequestModal(true)}
+            onClick={handleOpenModal}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:opacity-90 transition-opacity"
           >
             <MessageSquare size={18} /> Request Ad Campaign
@@ -308,7 +397,7 @@ export default function SellerAds() {
           <div className="bg-white rounded-2xl w-full max-w-md">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h2 className="text-xl font-bold text-slate-800">Request Ad Campaign</h2>
-              <button onClick={() => setShowRequestModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600">
                 <X size={24} />
               </button>
             </div>
@@ -378,7 +467,7 @@ export default function SellerAds() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowRequestModal(false)}
+                  onClick={handleCloseModal}
                   className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50"
                 >
                   Cancel
@@ -396,95 +485,6 @@ export default function SellerAds() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// Boosted Post Card
-function BoostedPostCard({ post, daysRemaining, onUnboost, unboosting = false }) {
-  return (
-    <div className="bg-white rounded-xl border-2 border-blue-200 shadow-sm overflow-hidden">
-      <div className="flex">
-        <div className="w-24 h-24 bg-slate-100 flex-shrink-0">
-          {post.images?.[0]?.low && (
-            <img src={post.images[0].low} alt={post.title} className="w-full h-full object-cover" />
-          )}
-        </div>
-        <div className="flex-1 p-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h4 className="font-bold text-slate-800 line-clamp-1">{post.title}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                  <Rocket size={12} /> Boosted
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={onUnboost}
-              disabled={unboosting}
-              className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {unboosting ? "Removing..." : "Remove"}
-            </button>
-          </div>
-          <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-            <span className="flex items-center gap-1">
-              <Eye size={12} /> {post.boostViews || 0} boost views
-            </span>
-            <span className={`flex items-center gap-1 ${daysRemaining <= 2 ? "text-amber-600" : ""}`}>
-              <Clock size={12} /> {daysRemaining} days left
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Regular Post Card
-function PostCard({ post, canBoost, onBoost, daysRemaining, boosting = false }) {
-  const isBoosted = post.isBoosted && daysRemaining > 0;
-
-  return (
-    <div className={`bg-white rounded-xl border shadow-sm overflow-hidden ${
-      isBoosted ? "border-blue-200" : "border-slate-100"
-    }`}>
-      <div className="aspect-square bg-slate-100 relative">
-        {post.images?.[0]?.low && (
-          <img src={post.images[0].low} alt={post.title} className="w-full h-full object-cover" />
-        )}
-        {isBoosted && (
-          <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-            <Rocket size={10} /> Boosted
-          </div>
-        )}
-      </div>
-      <div className="p-3">
-        <h4 className="font-medium text-slate-800 line-clamp-1">{post.title}</h4>
-        <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
-          <span className="flex items-center gap-1"><Eye size={12} /> {post.views || 0}</span>
-          {isBoosted && (
-            <span className="flex items-center gap-1 text-blue-600">
-              <Clock size={12} /> {daysRemaining}d left
-            </span>
-          )}
-        </div>
-        {!isBoosted && (
-          <button
-            onClick={onBoost}
-            disabled={!canBoost || boosting}
-            className={`w-full mt-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-              canBoost && !boosting
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-slate-100 text-slate-400 cursor-not-allowed"
-            }`}
-          >
-            <Rocket size={14} />
-            {boosting ? "Boosting..." : canBoost ? "Boost This Post" : "No slots available"}
-          </button>
-        )}
-      </div>
     </div>
   );
 }

@@ -1,8 +1,110 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, memo } from "react";
 import { API_ENDPOINTS } from "../../config/api";
 import { Package, AlertTriangle, Archive, Trash2, PencilLine } from "lucide-react";
 
 const LOW_STOCK_LIMIT = 3;
+
+// Memoized Stat Card
+const StatCard = memo(function StatCard({ label, value, tone }) {
+  const toneMap = {
+    slate: "bg-slate-100 text-slate-800",
+    amber: "bg-amber-100 text-amber-700",
+    red: "bg-red-100 text-red-700",
+    orange: "bg-orange-100 text-orange-700",
+  };
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className={`inline-flex px-2 py-1 rounded-md text-xs font-bold ${toneMap[tone]}`}>
+        {label}
+      </div>
+      <div className="mt-2 text-2xl font-extrabold text-slate-900">{value}</div>
+    </div>
+  );
+});
+
+// Memoized Post Card
+const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelete }) {
+  const outOfStock = post.isOutOfStock ||
+    (typeof post.quantityAvailable === "number" && post.quantityAvailable <= 0);
+  const lowStock = !outOfStock &&
+    typeof post.quantityAvailable === "number" &&
+    post.quantityAvailable <= LOW_STOCK_LIMIT;
+
+  const handleEdit = useCallback(() => onEdit(post), [post, onEdit]);
+  const handleToggle = useCallback(() => onToggleArchive(post), [post, onToggleArchive]);
+  const handleDelete = useCallback(() => onDelete(post._id), [post._id, onDelete]);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex gap-3">
+        <img
+          src={post.images?.[0]?.low || post.images?.[0]?.high}
+          alt={post.title}
+          className="h-24 w-24 rounded-lg object-cover bg-slate-100"
+          loading="lazy"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-bold text-slate-900 truncate">{post.title}</h3>
+            {post.isArchived && (
+              <span className="text-[10px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">
+                Archived
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 line-clamp-2 mt-1">{post.description}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700">
+              ₹{post.price ?? 0}
+            </span>
+            <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-700">
+              Qty:{" "}
+              {typeof post.quantityAvailable === "number"
+                ? post.quantityAvailable
+                : "Unlimited"}
+            </span>
+            {outOfStock && (
+              <span className="px-2 py-1 rounded-md bg-red-100 text-red-700 flex items-center gap-1">
+                <Package size={12} />
+                Out of stock
+              </span>
+            )}
+            {lowStock && (
+              <span className="px-2 py-1 rounded-md bg-orange-100 text-orange-700 flex items-center gap-1">
+                <AlertTriangle size={12} />
+                Low stock
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button
+          onClick={handleEdit}
+          className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold flex items-center justify-center gap-1"
+        >
+          <PencilLine size={14} />
+          Edit
+        </button>
+        <button
+          onClick={handleToggle}
+          className="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 text-sm font-semibold flex items-center justify-center gap-1"
+        >
+          <Archive size={14} />
+          {post.isArchived ? "Unarchive" : "Archive"}
+        </button>
+        <button
+          onClick={handleDelete}
+          className="px-3 py-2 rounded-lg border border-red-300 text-red-700 text-sm font-semibold flex items-center justify-center gap-1"
+        >
+          <Trash2 size={14} />
+          Delete
+        </button>
+      </div>
+    </div>
+  );
+});
 
 export default function Posts() {
   const [posts, setPosts] = useState([]);
@@ -18,9 +120,9 @@ export default function Posts() {
   });
   const [error, setError] = useState("");
 
-  const token = localStorage.getItem("token");
+  const token = useMemo(() => localStorage.getItem("token"), []);
 
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch(API_ENDPOINTS.SELLER.POSTS, {
@@ -35,11 +137,11 @@ export default function Posts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     loadPosts();
-  }, []);
+  }, [loadPosts]);
 
   const stats = useMemo(() => {
     const total = posts.length;
@@ -57,7 +159,7 @@ export default function Posts() {
     return { total, archived, outOfStock, lowStock };
   }, [posts]);
 
-  const openEdit = (post) => {
+  const openEdit = useCallback((post) => {
     setSelectedPost(post);
     setForm({
       title: post.title || "",
@@ -67,9 +169,9 @@ export default function Posts() {
         typeof post.quantityAvailable === "number" ? String(post.quantityAvailable) : "",
     });
     setShowEditor(true);
-  };
+  }, []);
 
-  const updatePost = async () => {
+  const updatePost = useCallback(async () => {
     if (!selectedPost) return;
     if (!form.title.trim() || !form.description.trim()) {
       alert("Title and description are required.");
@@ -106,9 +208,9 @@ export default function Posts() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [selectedPost, form, token]);
 
-  const toggleArchive = async (post) => {
+  const toggleArchive = useCallback(async (post) => {
     try {
       const res = await fetch(API_ENDPOINTS.SELLER.ARCHIVE_POST(post._id), {
         method: "POST",
@@ -125,9 +227,9 @@ export default function Posts() {
     } catch (err) {
       alert(err.message || "Failed to update archive status");
     }
-  };
+  }, [token]);
 
-  const deletePost = async (postId) => {
+  const deletePost = useCallback(async (postId) => {
     if (!window.confirm("Delete this post permanently?")) return;
     try {
       const res = await fetch(API_ENDPOINTS.SELLER.DELETE_POST(postId), {
@@ -141,7 +243,12 @@ export default function Posts() {
     } catch (err) {
       alert(err.message || "Failed to delete post");
     }
-  };
+  }, [token]);
+
+  const handleCloseEditor = useCallback(() => {
+    setShowEditor(false);
+    setSelectedPost(null);
+  }, []);
 
   if (loading) return <div className="p-6 text-slate-500">Loading posts...</div>;
 
@@ -176,88 +283,15 @@ export default function Posts() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {posts.map((post) => {
-            const outOfStock =
-              post.isOutOfStock ||
-              (typeof post.quantityAvailable === "number" && post.quantityAvailable <= 0);
-            const lowStock =
-              !outOfStock &&
-              typeof post.quantityAvailable === "number" &&
-              post.quantityAvailable <= LOW_STOCK_LIMIT;
-
-            return (
-              <div
-                key={post._id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="flex gap-3">
-                  <img
-                    src={post.images?.[0]?.low || post.images?.[0]?.high}
-                    alt={post.title}
-                    className="h-24 w-24 rounded-lg object-cover bg-slate-100"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-slate-900 truncate">{post.title}</h3>
-                      {post.isArchived && (
-                        <span className="text-[10px] px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">
-                          Archived
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">{post.description}</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-                      <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-700">
-                        ₹{post.price ?? 0}
-                      </span>
-                      <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-700">
-                        Qty:{" "}
-                        {typeof post.quantityAvailable === "number"
-                          ? post.quantityAvailable
-                          : "Unlimited"}
-                      </span>
-                      {outOfStock && (
-                        <span className="px-2 py-1 rounded-md bg-red-100 text-red-700 flex items-center gap-1">
-                          <Package size={12} />
-                          Out of stock
-                        </span>
-                      )}
-                      {lowStock && (
-                        <span className="px-2 py-1 rounded-md bg-orange-100 text-orange-700 flex items-center gap-1">
-                          <AlertTriangle size={12} />
-                          Low stock
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => openEdit(post)}
-                    className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold flex items-center justify-center gap-1"
-                  >
-                    <PencilLine size={14} />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => toggleArchive(post)}
-                    className="px-3 py-2 rounded-lg border border-amber-300 text-amber-700 text-sm font-semibold flex items-center justify-center gap-1"
-                  >
-                    <Archive size={14} />
-                    {post.isArchived ? "Unarchive" : "Archive"}
-                  </button>
-                  <button
-                    onClick={() => deletePost(post._id)}
-                    className="px-3 py-2 rounded-lg border border-red-300 text-red-700 text-sm font-semibold flex items-center justify-center gap-1"
-                  >
-                    <Trash2 size={14} />
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {posts.map((post) => (
+            <PostCard
+              key={post._id}
+              post={post}
+              onEdit={openEdit}
+              onToggleArchive={toggleArchive}
+              onDelete={deletePost}
+            />
+          ))}
         </div>
       )}
 
@@ -314,10 +348,7 @@ export default function Posts() {
 
             <div className="mt-5 flex justify-end gap-2">
               <button
-                onClick={() => {
-                  setShowEditor(false);
-                  setSelectedPost(null);
-                }}
+                onClick={handleCloseEditor}
                 className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-semibold"
                 disabled={saving}
               >
@@ -334,23 +365,6 @@ export default function Posts() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, tone }) {
-  const toneMap = {
-    slate: "bg-slate-100 text-slate-800",
-    amber: "bg-amber-100 text-amber-700",
-    red: "bg-red-100 text-red-700",
-    orange: "bg-orange-100 text-orange-700",
-  };
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className={`inline-flex px-2 py-1 rounded-md text-xs font-bold ${toneMap[tone]}`}>
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-extrabold text-slate-900">{value}</div>
     </div>
   );
 }

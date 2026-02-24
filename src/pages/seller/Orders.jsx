@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { API_ENDPOINTS } from "../../config/api";
 import {
   Package, Clock, CheckCircle, Truck, XCircle, RefreshCw,
@@ -83,9 +83,9 @@ export default function SellerOrders() {
   const [estimatedDays, setEstimatedDays] = useState("3");
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const currentTab = TABS.find((t) => t.key === activeTab);
+  const currentTab = useMemo(() => TABS.find((t) => t.key === activeTab), [activeTab]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     const token = localStorage.getItem("token");
     try {
       setLoading(true);
@@ -104,18 +104,18 @@ export default function SellerOrders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentTab]);
 
   useEffect(() => {
     fetchOrders();
-  }, [activeTab]);
+  }, [fetchOrders]);
 
   useEffect(() => {
     const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const handleStatusUpdate = async (orderId, newStatus, extraData = {}) => {
+  const handleStatusUpdate = useCallback(async (orderId, newStatus, extraData = {}) => {
     const token = localStorage.getItem("token");
     try {
       setUpdating(orderId);
@@ -140,9 +140,9 @@ export default function SellerOrders() {
     } finally {
       setUpdating(null);
     }
-  };
+  }, [fetchOrders]);
 
-  const handleShipOrder = async () => {
+  const handleShipOrder = useCallback(async () => {
     if (!shipModalOrder) return;
     if (!trackingNumber.trim()) {
       alert("Tracking number is required to confirm shipping.");
@@ -163,30 +163,30 @@ export default function SellerOrders() {
     setShippingCarrier("");
     setTrackingLink("");
     setEstimatedDays("3");
-  };
+  }, [shipModalOrder, trackingNumber, shippingCarrier, trackingLink, estimatedDays, handleStatusUpdate]);
 
-  const handleAction = (order, action) => {
+  const handleAction = useCallback((order, action) => {
     if (action.needsModal) {
       setShipModalOrder(order);
     } else {
       handleStatusUpdate(order._id, action.next, action.note ? { note: action.note } : {});
     }
-  };
+  }, [handleStatusUpdate]);
 
-  const getTabCount = (tab) => {
+  const getTabCount = useCallback((tab) => {
     if (!stats) return 0;
     return tab.statusKeys.reduce((sum, key) => sum + (stats[key] || 0), 0);
-  };
+  }, [stats]);
 
-  const formatDate = (date) => {
+  const formatDate = useCallback((date) => {
     return new Date(date).toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
-  };
+  }, []);
 
-  const formatDateTime = (date) => {
+  const formatDateTime = useCallback((date) => {
     return new Date(date).toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
@@ -194,7 +194,7 @@ export default function SellerOrders() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }, []);
 
   return (
     <div className="space-y-5 w-full">

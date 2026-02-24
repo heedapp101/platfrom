@@ -1,7 +1,81 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, MessageSquare, ShieldCheck, MapPin, ArrowUpDown, Calendar, Trophy } from "lucide-react";
 import { API_ENDPOINTS, getDocumentUrl } from "../../config/api";
+
+// Debounce hook for search optimization
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+// Memoized User Row Component
+const UserRow = memo(function UserRow({ user, onSelectUser, onMessageUser, getScoreColor }) {
+  const formattedDate = useMemo(() => 
+    new Date(user.createdAt).toLocaleDateString()
+  , [user.createdAt]);
+  
+  const handleClick = useCallback(() => onSelectUser(user), [user, onSelectUser]);
+  const handleMessage = useCallback((e) => {
+    e.stopPropagation();
+    onMessageUser(user);
+  }, [user, onMessageUser]);
+
+  return (
+    <tr 
+      onClick={handleClick}
+      className="hover:bg-slate-50 transition-colors cursor-pointer"
+    >
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+             {user.profilePic ? (
+               <img src={getDocumentUrl(user.profilePic)} alt="" className="w-full h-full object-cover" loading="lazy"/>
+             ) : (
+               <span className="font-bold text-slate-500">{user.username?.[0]?.toUpperCase()}</span>
+             )}
+          </div>
+          <div>
+            <p className="font-bold text-slate-700 text-sm">{user.name}</p>
+            <p className="text-xs text-slate-400">@{user.username}</p>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        <span className={`px-2 py-1 rounded text-xs font-bold ${
+          user.userType === 'business' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+        }`}>
+          {user.userType.toUpperCase()}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-sm text-slate-500">{formattedDate}</td>
+      <td className="px-6 py-4">
+        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getScoreColor(user.couponScore)}`}>
+           {user.couponScore} pts
+        </span>
+      </td>
+      <td className="px-6 py-4 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <button 
+            onClick={handleMessage}
+            className="text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 px-3 py-1 rounded-full transition-colors flex items-center gap-1"
+            title="Message User"
+          >
+            <MessageSquare size={12} />
+            DM
+          </button>
+          <button className="text-xs font-medium text-slate-400 hover:text-blue-600 border border-slate-200 hover:border-blue-200 px-3 py-1 rounded-full transition-colors">
+            View Details
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 export default function AdminUsers() {
   const navigate = useNavigate();
@@ -12,24 +86,21 @@ export default function AdminUsers() {
   // Filters & Sorting States
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState("createdAt"); // 'createdAt' or 'couponScore'
-  const [sortOrder, setSortOrder] = useState("desc"); // 'asc' or 'desc'
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  
+  // Debounce search for better performance
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
-  // 1. Fetch Users (Triggers on any filter change)
-  useEffect(() => {
-    fetchUsers();
-  }, [roleFilter, sortBy, sortOrder]); 
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     const token = localStorage.getItem("token");
     try {
-      // Build Query Params
       const params = new URLSearchParams({
         role: roleFilter,
         sortBy: sortBy,
         order: sortOrder,
-        search: searchTerm // Optional: Pass search to backend if desired, or keep local
+        search: debouncedSearch
       });
 
       const res = await fetch(API_ENDPOINTS.ADMIN.USERS(`?${params.toString()}`), {
@@ -45,20 +116,57 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleFilter, sortBy, sortOrder, debouncedSearch]);
 
-  // Local Search Handler (Debouncing is better, but this works for small lists)
-  // If you want backend search, add 'searchTerm' to the useEffect dependency array
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const getScoreColor = (score) => {
+  // Memoized filtered users for client-side search
+  const filteredUsers = useMemo(() => 
+    users.filter(user => 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  , [users, searchTerm]);
+
+  const getScoreColor = useCallback((score) => {
     if (score > 80) return "text-green-600 bg-green-50 border-green-200";
     if (score > 40) return "text-blue-600 bg-blue-50 border-blue-200";
     return "text-slate-600 bg-slate-50 border-slate-200";
-  };
+  }, []);
+
+  const handleSearchChange = useCallback((e) => {
+    setSearchTerm(e.target.value);
+  }, []);
+
+  const handleRoleFilterChange = useCallback((e) => {
+    setRoleFilter(e.target.value);
+  }, []);
+
+  const handleSortByDate = useCallback(() => {
+    setSortBy("createdAt");
+  }, []);
+
+  const handleSortByScore = useCallback(() => {
+    setSortBy("couponScore");
+  }, []);
+
+  const handleToggleSortOrder = useCallback(() => {
+    setSortOrder(prev => prev === "asc" ? "desc" : "asc");
+  }, []);
+
+  const handleSelectUser = useCallback((user) => {
+    setSelectedUser(user);
+  }, []);
+
+  const handleMessageUser = useCallback((user) => {
+    navigate('/admin/chat', { state: { selectedUser: user } });
+  }, [navigate]);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedUser(null);
+  }, []);
 
   return (
     <div className="p-6">
@@ -79,7 +187,7 @@ export default function AdminUsers() {
             placeholder="Search users..."
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
 
@@ -92,7 +200,7 @@ export default function AdminUsers() {
             <select 
               className="pl-9 pr-8 py-2 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={handleRoleFilterChange}
             >
               <option value="all">All Roles</option>
               <option value="general">General</option>
@@ -103,14 +211,14 @@ export default function AdminUsers() {
           {/* Sort By Field */}
           <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white">
             <button
-              onClick={() => setSortBy("createdAt")}
+              onClick={handleSortByDate}
               className={`px-3 py-2 text-sm flex items-center gap-2 ${sortBy === "createdAt" ? "bg-slate-100 font-semibold text-slate-800" : "text-slate-500 hover:bg-slate-50"}`}
             >
               <Calendar size={16} /> Date
             </button>
             <div className="w-[1px] h-full bg-slate-200"></div>
             <button
-              onClick={() => setSortBy("couponScore")}
+              onClick={handleSortByScore}
               className={`px-3 py-2 text-sm flex items-center gap-2 ${sortBy === "couponScore" ? "bg-blue-50 font-semibold text-blue-600" : "text-slate-500 hover:bg-slate-50"}`}
             >
               <Trophy size={16} /> Points
@@ -119,7 +227,7 @@ export default function AdminUsers() {
 
           {/* Sort Order (Asc/Desc) */}
           <button
-            onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+            onClick={handleToggleSortOrder}
             className="px-3 py-2 border border-slate-200 rounded-lg bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-2 text-sm"
             title={sortOrder === "asc" ? "Oldest / Lowest First" : "Newest / Highest First"}
           >
@@ -147,60 +255,13 @@ export default function AdminUsers() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredUsers.map((user) => (
-                <tr 
-                  key={user._id} 
-                  onClick={() => setSelectedUser(user)}
-                  className="hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                         {user.profilePic ? (
-                           <img src={getDocumentUrl(user.profilePic)} alt="" className="w-full h-full object-cover"/>
-                         ) : (
-                           <span className="font-bold text-slate-500">{user.username?.[0]?.toUpperCase()}</span>
-                         )}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-700 text-sm">{user.name}</p>
-                        <p className="text-xs text-slate-400">@{user.username}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      user.userType === 'business' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {user.userType.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getScoreColor(user.couponScore)}`}>
-                       {user.couponScore} pts
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate('/admin/chat', { state: { selectedUser: user } });
-                        }}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 px-3 py-1 rounded-full transition-colors flex items-center gap-1"
-                        title="Message User"
-                      >
-                        <MessageSquare size={12} />
-                        DM
-                      </button>
-                      <button className="text-xs font-medium text-slate-400 hover:text-blue-600 border border-slate-200 hover:border-blue-200 px-3 py-1 rounded-full transition-colors">
-                        View Details
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <UserRow
+                  key={user._id}
+                  user={user}
+                  onSelectUser={handleSelectUser}
+                  onMessageUser={handleMessageUser}
+                  getScoreColor={getScoreColor}
+                />
               ))}
             </tbody>
           </table>
@@ -219,7 +280,7 @@ export default function AdminUsers() {
             {/* Header Image/Banner */}
             <div className="h-24 bg-gradient-to-r from-slate-800 to-slate-900 relative">
                <button 
-                  onClick={() => setSelectedUser(null)}
+                  onClick={handleCloseModal}
                   className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl leading-none"
                >
                  &times;
@@ -232,7 +293,7 @@ export default function AdminUsers() {
               <div className="relative -mt-12 mb-4 flex justify-between items-end">
                 <div className="w-24 h-24 rounded-full border-4 border-white bg-white overflow-hidden shadow-md">
                    {selectedUser.profilePic ? (
-                     <img src={getDocumentUrl(selectedUser.profilePic)} className="w-full h-full object-cover" />
+                     <img src={getDocumentUrl(selectedUser.profilePic)} className="w-full h-full object-cover" loading="lazy" />
                    ) : (
                      <div className="w-full h-full bg-slate-100 flex items-center justify-center text-3xl">👤</div>
                    )}

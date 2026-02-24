@@ -1,29 +1,64 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { LayoutDashboard, ShoppingBag, Heart, DollarSign, Calendar } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
+
+// Memoized Stat Card
+const StatCard = memo(function StatCard({ title, value, icon, color }) {
+  return (
+    <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${color}`}>{icon}</div>
+      <div>
+        <p className="text-xs text-slate-400 font-bold uppercase">{title}</p>
+        <p className="text-2xl font-bold text-slate-800">{value}</p>
+      </div>
+    </div>
+  );
+});
+
+// Memoized Activity Chart
+const ActivityChart = memo(function ActivityChart({ data }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center text-slate-400">
+        No activity data available
+      </div>
+    );
+  }
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+        <XAxis dataKey="date" hide />
+        <Tooltip />
+        <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#dbeafe" strokeWidth={2} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+});
 
 export default function SellerDashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const token = localStorage.getItem("token");
-      try {
-        const res = await fetch(API_ENDPOINTS.SELLER.STATS, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) setStats(data);
-      } catch (error) {
-        console.error("Stats fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
+  const fetchStats = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(API_ENDPOINTS.SELLER.STATS, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setStats(data);
+    } catch (error) {
+      console.error("Stats fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   if (loading) return <div className="p-6 text-slate-500">Loading Dashboard...</div>;
 
@@ -49,20 +84,7 @@ export default function SellerDashboard() {
         <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
           <h3 className="font-bold text-slate-700 mb-4">Post Activity</h3>
           <div className="h-64" style={{ minHeight: 256 }}>
-            {stats?.graphData && stats.graphData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.graphData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" hide />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="count" stroke="#3b82f6" fill="#dbeafe" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-400">
-                No activity data available
-              </div>
-            )}
+            <ActivityChart data={stats?.graphData} />
           </div>
         </div>
 
@@ -82,18 +104,6 @@ export default function SellerDashboard() {
             <button className="w-full py-2 bg-slate-900 text-white rounded-lg text-sm font-bold">Manage Subscription</button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, icon, color }) {
-  return (
-    <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl ${color}`}>{icon}</div>
-      <div>
-        <p className="text-xs text-slate-400 font-bold uppercase">{title}</p>
-        <p className="text-2xl font-bold text-slate-800">{value}</p>
       </div>
     </div>
   );
