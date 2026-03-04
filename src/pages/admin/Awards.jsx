@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Award, Trophy, User, Image, Eye, EyeOff, Search, Filter, X, AlertCircle } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
+import AwardOffersPanel from "./AwardOffersPanel";
 
 const messages = [
   "This post has exceptional engagement!",
@@ -24,6 +25,7 @@ const getPostImage = (post) => {
 const getUserAvatar = (user) => user?.profilePic || "";
 
 export default function Awards() {
+  const [panelTab, setPanelTab] = useState("awards");
   const [activeTab, setActiveTab] = useState("candidates");
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,8 +45,9 @@ export default function Awards() {
   });
 
   useEffect(() => {
+    if (panelTab !== "awards") return;
     activeTab === "candidates" ? fetchCandidates() : fetchAwards();
-  }, [activeTab, statusFilter]);
+  }, [panelTab, activeTab, statusFilter]);
 
   const fetchCandidates = async () => {
     setLoading(true);
@@ -156,24 +159,58 @@ export default function Awards() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Trophy className="text-yellow-500" size={28} /> Awards Management</h1>
-      <div className="flex gap-2 border-b border-slate-200 pb-2">
-        {["candidates", "posts", "users", "all"].map((k) => (
-          <button key={k} onClick={() => setActiveTab(k)} className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === k ? "bg-slate-100 text-slate-800 border-b-2 border-slate-500" : "text-slate-500 hover:bg-slate-50"}`}>{k === "candidates" ? "Top Candidates" : k === "posts" ? "Awarded Posts" : k === "users" ? "Awarded Users" : "All Awards"}</button>
-        ))}
-      </div>
-      {activeTab !== "candidates" && (
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1 max-w-md"><Search className="absolute left-3 top-2.5 text-slate-400" size={18} /><input className="w-full pl-10 pr-4 py-2 border rounded-lg" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-          <div className="flex items-center gap-2"><Filter size={16} className="text-slate-400" /><select className="px-3 py-2 border rounded-lg" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="paid">Paid</option><option value="rejected">Rejected</option></select></div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <Trophy className="text-yellow-500" size={28} />
+          Awards & Offers
+        </h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPanelTab("awards")}
+            className={`px-3 py-2 text-sm rounded-lg border ${
+              panelTab === "awards"
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-600 border-slate-200"
+            }`}
+          >
+            Awards
+          </button>
+          <button
+            onClick={() => setPanelTab("offers")}
+            className={`px-3 py-2 text-sm rounded-lg border ${
+              panelTab === "offers"
+                ? "bg-slate-900 text-white border-slate-900"
+                : "bg-white text-slate-600 border-slate-200"
+            }`}
+          >
+            Offers
+          </button>
         </div>
-      )}
-      {loading ? <div className="text-center py-10 text-slate-500">Loading...</div> : activeTab === "candidates" ? (
-        <Candidates candidates={candidates} onAward={openModal} />
+      </div>
+
+      {panelTab === "offers" ? (
+        <AwardOffersPanel />
       ) : (
-        <AwardsTable awards={filtered} onStatus={(id, status) => updateAward(id, { status })} onVisibility={(id, showInFeed) => updateAward(id, { showInFeed: !showInFeed })} />
+        <>
+          <div className="flex gap-2 border-b border-slate-200 pb-2">
+            {["candidates", "posts", "users", "all"].map((k) => (
+              <button key={k} onClick={() => setActiveTab(k)} className={`px-4 py-2 rounded-t-lg font-medium ${activeTab === k ? "bg-slate-100 text-slate-800 border-b-2 border-slate-500" : "text-slate-500 hover:bg-slate-50"}`}>{k === "candidates" ? "Top Candidates" : k === "posts" ? "Awarded Posts" : k === "users" ? "Awarded Users" : "All Awards"}</button>
+            ))}
+          </div>
+          {activeTab !== "candidates" && (
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-md"><Search className="absolute left-3 top-2.5 text-slate-400" size={18} /><input className="w-full pl-10 pr-4 py-2 border rounded-lg" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+              <div className="flex items-center gap-2"><Filter size={16} className="text-slate-400" /><select className="px-3 py-2 border rounded-lg" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="paid">Paid</option><option value="rejected">Rejected</option></select></div>
+            </div>
+          )}
+          {loading ? <div className="text-center py-10 text-slate-500">Loading...</div> : activeTab === "candidates" ? (
+            <Candidates candidates={candidates} onAward={openModal} />
+          ) : (
+            <AwardsTable awards={filtered} onStatus={(id, status) => updateAward(id, { status })} onVisibility={(id, showInFeed) => updateAward(id, { showInFeed: !showInFeed })} />
+          )}
+          {target && <AwardModal target={target} form={form} setForm={setForm} onClose={() => setTarget(null)} onSubmit={submitAward} submitting={submitting} />}
+        </>
       )}
-      {target && <AwardModal target={target} form={form} setForm={setForm} onClose={() => setTarget(null)} onSubmit={submitAward} submitting={submitting} />}
     </div>
   );
 }
