@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, MessageSquare, ShieldCheck, MapPin, ArrowUpDown, Calendar, Trophy } from "lucide-react";
+import { Search, Filter, MessageSquare, ShieldCheck, MapPin, ArrowUpDown, Calendar, Trophy, ShoppingBag, Wallet } from "lucide-react";
 import { API_ENDPOINTS, getDocumentUrl } from "../../config/api";
 
 // Debounce hook for search optimization
@@ -82,6 +82,8 @@ export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [purchaseHistory, setPurchaseHistory] = useState(null);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
 
   // Filters & Sorting States
   const [roleFilter, setRoleFilter] = useState("all");
@@ -118,9 +120,40 @@ export default function AdminUsers() {
     }
   }, [roleFilter, sortBy, sortOrder, debouncedSearch]);
 
+  const fetchPurchaseHistory = useCallback(async (userId) => {
+    if (!userId) return;
+    setPurchaseLoading(true);
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(API_ENDPOINTS.ADMIN.USER_PURCHASES(userId, "?page=1&limit=20"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPurchaseHistory(data);
+      } else {
+        setPurchaseHistory(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch purchase history", error);
+      setPurchaseHistory(null);
+    } finally {
+      setPurchaseLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    if (!selectedUser?._id) {
+      setPurchaseHistory(null);
+      setPurchaseLoading(false);
+      return;
+    }
+    fetchPurchaseHistory(selectedUser._id);
+  }, [selectedUser?._id, fetchPurchaseHistory]);
 
   // Memoized filtered users for client-side search
   const filteredUsers = useMemo(() => 
@@ -135,6 +168,11 @@ export default function AdminUsers() {
     if (score > 40) return "text-blue-600 bg-blue-50 border-blue-200";
     return "text-slate-600 bg-slate-50 border-slate-200";
   }, []);
+
+  const formatCurrency = useCallback(
+    (amount) => `Rs ${Number(amount || 0).toLocaleString("en-IN")}`,
+    []
+  );
 
   const handleSearchChange = useCallback((e) => {
     setSearchTerm(e.target.value);
@@ -158,6 +196,8 @@ export default function AdminUsers() {
 
   const handleSelectUser = useCallback((user) => {
     setSelectedUser(user);
+    setPurchaseHistory(null);
+    setPurchaseLoading(true);
   }, []);
 
   const handleMessageUser = useCallback((user) => {
@@ -166,6 +206,8 @@ export default function AdminUsers() {
 
   const handleCloseModal = useCallback(() => {
     setSelectedUser(null);
+    setPurchaseHistory(null);
+    setPurchaseLoading(false);
   }, []);
 
   return (
@@ -336,6 +378,88 @@ export default function AdminUsers() {
                   <span className="text-[10px] text-slate-400 uppercase font-bold">Contributions</span>
                   <p className="font-semibold text-slate-700 text-sm">{selectedUser.postCount} Posts</p>
                 </div>
+              </div>
+
+              {/* Purchase History */}
+              <div className="mb-6">
+                <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                  Purchase History
+                </h4>
+                {purchaseLoading ? (
+                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 text-sm text-slate-500">
+                    Loading purchase history...
+                  </div>
+                ) : purchaseHistory ? (
+                  <>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Total Orders</p>
+                        <p className="text-sm font-semibold text-slate-700 flex items-center gap-1 mt-1">
+                          <ShoppingBag size={13} />
+                          {purchaseHistory?.summary?.totalOrders || 0}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Money Spent</p>
+                        <p className="text-sm font-semibold text-slate-700 flex items-center gap-1 mt-1">
+                          <Wallet size={13} />
+                          {formatCurrency(purchaseHistory?.summary?.totalSpent)}
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Delivered</p>
+                        <p className="text-sm font-semibold text-slate-700">
+                          {purchaseHistory?.summary?.deliveredOrders || 0} orders
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Refunded</p>
+                        <p className="text-sm font-semibold text-slate-700">
+                          {formatCurrency(purchaseHistory?.summary?.refundedAmount)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="border border-slate-100 rounded-lg overflow-hidden">
+                      <div className="bg-slate-50 px-3 py-2 text-[11px] uppercase font-semibold text-slate-500 grid grid-cols-[120px_1fr_100px_90px] gap-2">
+                        <span>Order</span>
+                        <span>Seller</span>
+                        <span>Amount</span>
+                        <span>Status</span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
+                        {(purchaseHistory?.orders || []).length > 0 ? (
+                          purchaseHistory.orders.map((order) => (
+                            <div
+                              key={order._id}
+                              className="px-3 py-2 text-xs text-slate-700 grid grid-cols-[120px_1fr_100px_90px] gap-2 items-center"
+                            >
+                              <div>
+                                <p className="font-semibold">{order.orderNumber}</p>
+                                <p className="text-[11px] text-slate-400">
+                                  {new Date(order.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <p className="truncate">
+                                {order?.seller?.companyName || order?.seller?.name || order?.seller?.username || "-"}
+                              </p>
+                              <p className="font-semibold">{formatCurrency(order.totalAmount)}</p>
+                              <span className="capitalize">{order.status?.replace(/_/g, " ")}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-5 text-sm text-slate-500 text-center">
+                            No purchases found for this user.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 text-sm text-slate-500">
+                    Purchase history unavailable.
+                  </div>
+                )}
               </div>
 
               {/* Interests Tags */}

@@ -78,6 +78,10 @@ export default function Sidebar({ collapsed }) {
                <span>🏆</span>
                {!collapsed && <span>Awards</span>}
             </NavLink>
+            <NavLink to={`${basePath}/push-notifications`} className={linkClass}>
+               <span>PUSH</span>
+               {!collapsed && <span>Push Notification</span>}
+            </NavLink>
             <NavLink to={`${basePath}/settings`} className={linkClass}>
                <span>⚙️</span>
                {!collapsed && <span>Settings</span>}

@@ -38,7 +38,9 @@ export const API_ENDPOINTS = {
     APPROVE: (id) => `${API_BASE_URL}/admin/approve/${id}`,
     REJECT: (id) => `${API_BASE_URL}/admin/reject/${id}`,
     USERS: (params = "") => `${API_BASE_URL}/admin/users${params}`,
+    USER_PURCHASES: (userId, params = "") => `${API_BASE_URL}/admin/users/${userId}/purchases${params}`,
     DELETED_USERS: `${API_BASE_URL}/admin/users/deleted`,
+    PUSH_SEND: `${API_BASE_URL}/admin/push-notifications/send`,
     REPORTS: `${API_BASE_URL}/admin/reports`,
     UPDATE_REPORT: (reportId) => `${API_BASE_URL}/admin/reports/${reportId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/admin/reports/post/${postId}`,
@@ -90,6 +92,22 @@ export const API_ENDPOINTS = {
     TOGGLE: (id) => `${API_BASE_URL}/ads/${id}/toggle`,
     PAYMENT: (id) => `${API_BASE_URL}/ads/${id}/payment`,
     CLICK: (id) => `${API_BASE_URL}/ads/${id}/click`,
+  },
+  OFFERS: {
+    ACTIVE: `${API_BASE_URL}/offers/active`,
+    DETAILS: (offerId) => `${API_BASE_URL}/offers/${offerId}`,
+    ELIGIBILITY: (offerId) => `${API_BASE_URL}/offers/${offerId}/eligibility`,
+    APPLY: (offerId) => `${API_BASE_URL}/offers/${offerId}/apply`,
+    MY_APPLICATIONS: `${API_BASE_URL}/offers/my-applications`,
+    ADMIN_LIST: `${API_BASE_URL}/offers/admin/list`,
+    ADMIN_CREATE: `${API_BASE_URL}/offers/admin`,
+    ADMIN_UPDATE: (offerId) => `${API_BASE_URL}/offers/admin/${offerId}`,
+    ADMIN_TOGGLE: (offerId) => `${API_BASE_URL}/offers/admin/${offerId}/toggle`,
+    ADMIN_APPLICATIONS: (offerId, params = "") => `${API_BASE_URL}/offers/admin/${offerId}/applications${params}`,
+    ADMIN_APPLICATION_ELIGIBILITY: (offerId, applicationId) =>
+      `${API_BASE_URL}/offers/admin/${offerId}/applications/${applicationId}/eligibility`,
+    ADMIN_REVIEW_APPLICATION: (offerId, applicationId) =>
+      `${API_BASE_URL}/offers/admin/${offerId}/applications/${applicationId}`,
   },
   CONTACT: {
     SUBMIT: `${API_BASE_URL}/contact`,

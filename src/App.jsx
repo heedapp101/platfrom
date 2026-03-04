@@ -44,6 +44,7 @@ const Compliance = lazy(() => import("./pages/admin/Compliance"));
 const ReportedPosts = lazy(() => import("./pages/admin/ReportedPosts"));
 const Legal = lazy(() => import("./pages/admin/Legal"));
 const Awards = lazy(() => import("./pages/admin/Awards"));
+const AdminPushNotifications = lazy(() => import("./pages/admin/PushNotifications"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings"));
 
 export default function App() {
@@ -95,6 +96,7 @@ export default function App() {
           <Route path="reports" element={<ReportedPosts />} />
           <Route path="legal" element={<Legal />} />
           <Route path="awards" element={<Awards />} />
+          <Route path="push-notifications" element={<AdminPushNotifications />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>
 
