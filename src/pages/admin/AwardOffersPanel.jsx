@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, RefreshCcw, CheckCircle2, XCircle, Power, Pencil } from "lucide-react";
 import { API_ENDPOINTS } from "../../config/api";
 
@@ -34,6 +34,9 @@ export default function AwardOffersPanel() {
   const [savingOffer, setSavingOffer] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
   const [form, setForm] = useState(buildDefaultForm);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const previewObjectUrlRef = useRef("");
 
   const [selectedOfferId, setSelectedOfferId] = useState("");
   const [applications, setApplications] = useState([]);
@@ -109,13 +112,36 @@ export default function AwardOffersPanel() {
     fetchApplications(selectedOfferId, applicationFilter);
   }, [selectedOfferId, applicationFilter, fetchApplications]);
 
+  const revokePreviewObjectUrl = () => {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = "";
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    revokePreviewObjectUrl();
+    const objectUrl = URL.createObjectURL(file);
+    previewObjectUrlRef.current = objectUrl;
+    setImageFile(file);
+    setImagePreview(objectUrl);
+  };
+
+  useEffect(() => () => revokePreviewObjectUrl(), []);
+
   const openCreate = () => {
+    revokePreviewObjectUrl();
     setEditingOffer(null);
     setForm(buildDefaultForm());
+    setImageFile(null);
+    setImagePreview("");
     setShowForm(true);
   };
 
   const openEdit = (offer) => {
+    revokePreviewObjectUrl();
     setEditingOffer(offer);
     setForm({
       title: offer.title || "",
@@ -132,12 +158,17 @@ export default function AwardOffersPanel() {
       priority: Number(offer.priority || 999),
       isActive: Boolean(offer.isActive),
     });
+    setImageFile(null);
+    setImagePreview(offer.bannerImageUrl || "");
     setShowForm(true);
   };
 
   const closeForm = () => {
+    revokePreviewObjectUrl();
     setShowForm(false);
     setEditingOffer(null);
+    setImageFile(null);
+    setImagePreview("");
   };
 
   const handleSaveOffer = async (e) => {
@@ -149,20 +180,35 @@ export default function AwardOffersPanel() {
         ? API_ENDPOINTS.OFFERS.ADMIN_UPDATE(editingOffer._id)
         : API_ENDPOINTS.OFFERS.ADMIN_CREATE;
       const method = editingOffer ? "PUT" : "POST";
-      const payload = {
-        ...form,
-        minPurchaseAmount: Number(form.minPurchaseAmount || 0),
-        eligibilityMonth: Number(form.eligibilityMonth || 1),
-        eligibilityYear: Number(form.eligibilityYear || new Date().getFullYear()),
-        priority: Number(form.priority || 999),
-      };
+
+      const payload = new FormData();
+      payload.append("title", String(form.title || "").trim());
+      payload.append("subtitle", String(form.subtitle || "").trim());
+      payload.append("message", String(form.message || "").trim());
+      payload.append("brandLabel", String(form.brandLabel || "Heeszo").trim());
+      payload.append("ctaLabel", String(form.ctaLabel || "Participate").trim());
+      payload.append("minPurchaseAmount", String(Number(form.minPurchaseAmount || 0)));
+      payload.append("eligibilityMonth", String(Number(form.eligibilityMonth || 1)));
+      payload.append("eligibilityYear", String(Number(form.eligibilityYear || new Date().getFullYear())));
+      payload.append("startDate", String(form.startDate || ""));
+      payload.append("endDate", String(form.endDate || ""));
+      payload.append("priority", String(Number(form.priority || 999)));
+      payload.append("isActive", String(Boolean(form.isActive)));
+
+      if (imageFile) {
+        payload.append("image", imageFile);
+      } else if (editingOffer && !imagePreview) {
+        payload.append("bannerImageUrl", "");
+      } else if (editingOffer?.bannerImageUrl && imagePreview) {
+        payload.append("bannerImageUrl", editingOffer.bannerImageUrl);
+      }
+
       const res = await fetch(endpoint, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: payload,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -483,11 +529,53 @@ export default function AwardOffersPanel() {
                 />
               </div>
 
-              <Input
-                label="Banner Image URL (optional)"
-                value={form.bannerImageUrl}
-                onChange={(value) => setForm((prev) => ({ ...prev, bannerImageUrl: value }))}
-              />
+              <div className="space-y-2">
+                <span className="text-xs font-semibold uppercase text-slate-500">Offer Banner Image</span>
+                <div className="border border-dashed border-slate-300 rounded-lg p-3">
+                  {imagePreview ? (
+                    <div className="space-y-3">
+                      <img
+                        src={imagePreview}
+                        alt="Offer preview"
+                        className="w-full max-h-48 object-cover rounded-lg border border-slate-200"
+                      />
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 text-xs border border-slate-200 rounded cursor-pointer hover:bg-slate-50">
+                          Change Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 text-xs border border-slate-200 rounded text-slate-600 hover:bg-slate-50"
+                          onClick={() => {
+                            revokePreviewObjectUrl();
+                            setImageFile(null);
+                            setImagePreview("");
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="block text-center py-6 cursor-pointer">
+                      <p className="text-sm text-slate-600">Click to upload offer image</p>
+                      <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP up to 5MB</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <Input
