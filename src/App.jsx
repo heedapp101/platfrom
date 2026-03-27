@@ -34,6 +34,7 @@ const SellerSettings = lazy(() => import("./pages/seller/Settings"));
 /* ADMIN - Lazy loaded */
 const Overview = lazy(() => import("./pages/admin/Overview"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminBadges = lazy(() => import("./pages/admin/Badges"));
 const DeletedUsers = lazy(() => import("./pages/admin/DeletedUsers"));
 const AdminApprovals = lazy(() => import("./pages/admin/Approvals"));
 const Revenue = lazy(() => import("./pages/admin/Revenue"));
@@ -86,6 +87,7 @@ export default function App() {
         >
           <Route index element={<Overview />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="badges" element={<AdminBadges />} />
           <Route path="deleted-users" element={<DeletedUsers />} />
           <Route path="approvals" element={<AdminApprovals />} />
           <Route path="revenue" element={<Revenue />} />

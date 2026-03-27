@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useCallback, memo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, MessageSquare, ShieldCheck, MapPin, ArrowUpDown, Calendar, Trophy, ShoppingBag, Wallet } from "lucide-react";
+import { Search, Filter, MessageSquare, MapPin, ArrowUpDown, Calendar, Trophy, ShoppingBag, Wallet } from "lucide-react";
 import { API_ENDPOINTS, getDocumentUrl } from "../../config/api";
+import VerificationBadge from "../../components/VerificationBadge";
 
 // Debounce hook for search optimization
 function useDebounce(value, delay) {
@@ -40,7 +41,10 @@ const UserRow = memo(function UserRow({ user, onSelectUser, onMessageUser, getSc
              )}
           </div>
           <div>
-            <p className="font-bold text-slate-700 text-sm">{user.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-slate-700 text-sm">{user.name}</p>
+              <VerificationBadge user={user} size="sm" />
+            </div>
             <p className="text-xs text-slate-400">@{user.username}</p>
           </div>
         </div>
@@ -354,7 +358,7 @@ export default function AdminUsers() {
               <div className="mb-6">
                  <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                    {selectedUser.name}
-                   {selectedUser.isVerified && <ShieldCheck className="text-blue-500" size={20} />}
+                   <VerificationBadge user={selectedUser} size="md" />
                  </h2>
                  <p className="text-slate-500 text-sm">@{selectedUser.username}</p>
                  <p className="text-slate-400 text-xs mt-1">{selectedUser.email}</p>

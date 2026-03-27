@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
     APPROVE: (id) => `${API_BASE_URL}/admin/approve/${id}`,
     REJECT: (id) => `${API_BASE_URL}/admin/reject/${id}`,
     USERS: (params = "") => `${API_BASE_URL}/admin/users${params}`,
+    BADGES: (params = "") => `${API_BASE_URL}/admin/badges${params}`,
+    UPDATE_BADGE: (userId) => `${API_BASE_URL}/admin/badges/${userId}`,
     USER_PURCHASES: (userId, params = "") => `${API_BASE_URL}/admin/users/${userId}/purchases${params}`,
     DELETED_USERS: `${API_BASE_URL}/admin/users/deleted`,
     PUSH_SEND: `${API_BASE_URL}/admin/push-notifications/send`,
@@ -67,6 +69,8 @@ export const API_ENDPOINTS = {
   SELLER: {
     STATS: `${API_BASE_URL}/images/seller/stats`,
     POSTS: `${API_BASE_URL}/images/posts/me`,
+    POST_LIKERS: (postId) => `${API_BASE_URL}/images/${postId}/likers`,
+    SEND_POST_OFFER: (postId) => `${API_BASE_URL}/images/${postId}/offers`,
     UPDATE_POST: (postId) => `${API_BASE_URL}/images/${postId}`,
     DELETE_POST: (postId) => `${API_BASE_URL}/images/${postId}`,
     ARCHIVE_POST: (postId) => `${API_BASE_URL}/images/${postId}/archive`,

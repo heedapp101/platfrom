@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState, useCallback, memo } from "react";
-import { API_ENDPOINTS } from "../../config/api";
-import { Package, AlertTriangle, Archive, Trash2, PencilLine } from "lucide-react";
+import { API_ENDPOINTS, getDocumentUrl } from "../../config/api";
+import {
+  Package,
+  AlertTriangle,
+  Archive,
+  Trash2,
+  PencilLine,
+  Heart,
+  Users,
+  SendHorizontal,
+  CheckSquare,
+  Square,
+  X,
+} from "lucide-react";
+import VerificationBadge from "../../components/VerificationBadge";
 
 const LOW_STOCK_LIMIT = 3;
 
@@ -23,7 +36,7 @@ const StatCard = memo(function StatCard({ label, value, tone }) {
 });
 
 // Memoized Post Card
-const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelete }) {
+const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelete, onOpenOffers }) {
   const outOfStock = post.isOutOfStock ||
     (typeof post.quantityAvailable === "number" && post.quantityAvailable <= 0);
   const lowStock = !outOfStock &&
@@ -33,6 +46,7 @@ const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelet
   const handleEdit = useCallback(() => onEdit(post), [post, onEdit]);
   const handleToggle = useCallback(() => onToggleArchive(post), [post, onToggleArchive]);
   const handleDelete = useCallback(() => onDelete(post._id), [post._id, onDelete]);
+  const handleOpenOffers = useCallback(() => onOpenOffers(post), [post, onOpenOffers]);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -63,6 +77,10 @@ const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelet
                 ? post.quantityAvailable
                 : "Unlimited"}
             </span>
+            <span className="px-2 py-1 rounded-md bg-rose-50 text-rose-700 flex items-center gap-1">
+              <Heart size={12} />
+              {post.likes ?? post.likesCount ?? 0} likes
+            </span>
             {outOfStock && (
               <span className="px-2 py-1 rounded-md bg-red-100 text-red-700 flex items-center gap-1">
                 <Package size={12} />
@@ -79,7 +97,7 @@ const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelet
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           onClick={handleEdit}
           className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold flex items-center justify-center gap-1"
@@ -101,6 +119,13 @@ const PostCard = memo(function PostCard({ post, onEdit, onToggleArchive, onDelet
           <Trash2 size={14} />
           Delete
         </button>
+        <button
+          onClick={handleOpenOffers}
+          className="px-3 py-2 rounded-lg border border-blue-300 text-blue-700 text-sm font-semibold flex items-center justify-center gap-1"
+        >
+          <SendHorizontal size={14} />
+          Likes & Offer
+        </button>
       </div>
     </div>
   );
@@ -119,6 +144,16 @@ export default function Posts() {
     quantityAvailable: "",
   });
   const [error, setError] = useState("");
+  const [offerModalOpen, setOfferModalOpen] = useState(false);
+  const [offerPost, setOfferPost] = useState(null);
+  const [likers, setLikers] = useState([]);
+  const [likersLoading, setLikersLoading] = useState(false);
+  const [selectedLikerIds, setSelectedLikerIds] = useState([]);
+  const [offerSending, setOfferSending] = useState(false);
+  const [offerForm, setOfferForm] = useState({
+    offerPrice: "",
+    message: "",
+  });
 
   const token = useMemo(() => localStorage.getItem("token"), []);
 
@@ -142,6 +177,108 @@ export default function Posts() {
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  const closeOfferModal = useCallback(() => {
+    setOfferModalOpen(false);
+    setOfferPost(null);
+    setLikers([]);
+    setSelectedLikerIds([]);
+    setOfferForm({ offerPrice: "", message: "" });
+  }, []);
+
+  const openOfferModal = useCallback(
+    async (post) => {
+      setOfferPost(post);
+      setOfferModalOpen(true);
+      setLikersLoading(true);
+      setSelectedLikerIds([]);
+      setOfferForm({
+        offerPrice: post?.price !== undefined && post?.price !== null ? String(post.price) : "",
+        message: "",
+      });
+
+      try {
+        const res = await fetch(API_ENDPOINTS.SELLER.POST_LIKERS(post._id), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "Failed to load liked users");
+        const nextLikers = Array.isArray(data?.likers) ? data.likers : [];
+        setLikers(nextLikers);
+        setSelectedLikerIds(nextLikers.map((user) => user._id));
+      } catch (err) {
+        alert(err.message || "Failed to load liked users");
+        setLikers([]);
+      } finally {
+        setLikersLoading(false);
+      }
+    },
+    [token]
+  );
+
+  const toggleLikerSelection = useCallback((userId) => {
+    setSelectedLikerIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  }, []);
+
+  const selectAllLikers = useCallback(() => {
+    setSelectedLikerIds(likers.map((user) => user._id));
+  }, [likers]);
+
+  const clearLikerSelection = useCallback(() => {
+    setSelectedLikerIds([]);
+  }, []);
+
+  const sendOffer = useCallback(
+    async (mode = "selected") => {
+      if (!offerPost) return;
+
+      const parsedOfferPrice = Number(offerForm.offerPrice);
+      if (!Number.isFinite(parsedOfferPrice) || parsedOfferPrice <= 0) {
+        alert("Enter a valid offer price.");
+        return;
+      }
+
+      if (mode === "selected" && selectedLikerIds.length === 0) {
+        alert("Select at least one liked user or send to all.");
+        return;
+      }
+
+      try {
+        setOfferSending(true);
+        const payload = {
+          offerPrice: parsedOfferPrice,
+          message: offerForm.message.trim(),
+          ...(mode === "selected" ? { recipientIds: selectedLikerIds } : {}),
+        };
+
+        const res = await fetch(API_ENDPOINTS.SELLER.SEND_POST_OFFER(offerPost._id), {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "Failed to send offer");
+
+        alert(
+          `Offer sent to ${data?.sentCount || 0} user(s).` +
+            (Array.isArray(data?.failed) && data.failed.length > 0
+              ? ` ${data.failed.length} failed.`
+              : "")
+        );
+        closeOfferModal();
+      } catch (err) {
+        alert(err.message || "Failed to send offer");
+      } finally {
+        setOfferSending(false);
+      }
+    },
+    [closeOfferModal, offerForm.message, offerForm.offerPrice, offerPost, selectedLikerIds, token]
+  );
 
   const stats = useMemo(() => {
     const total = posts.length;
@@ -290,8 +427,187 @@ export default function Posts() {
               onEdit={openEdit}
               onToggleArchive={toggleArchive}
               onDelete={deletePost}
+              onOpenOffers={openOfferModal}
             />
           ))}
+        </div>
+      )}
+
+      {offerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Likes & Offer</h2>
+                <p className="text-sm text-slate-500">
+                  Send an in-app offer with Buy Now to everyone who liked this post or only selected users.
+                </p>
+              </div>
+              <button
+                onClick={closeOfferModal}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 hover:text-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r">
+                <div className="flex items-start gap-4">
+                  <img
+                    src={offerPost?.images?.[0]?.low || offerPost?.images?.[0]?.high}
+                    alt={offerPost?.title}
+                    className="h-24 w-24 rounded-2xl object-cover bg-slate-100"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-lg font-bold text-slate-900">{offerPost?.title}</h3>
+                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">{offerPost?.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+                        <Heart size={12} />
+                        {likers.length} interested users
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                        <Users size={12} />
+                        {selectedLikerIds.length} selected
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={selectAllLikers}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+                    disabled={likers.length === 0}
+                  >
+                    <CheckSquare size={14} />
+                    Select All
+                  </button>
+                  <button
+                    onClick={clearLikerSelection}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+                    disabled={selectedLikerIds.length === 0}
+                  >
+                    <Square size={14} />
+                    Clear
+                  </button>
+                </div>
+
+                <div className="mt-4 max-h-[420px] overflow-y-auto rounded-2xl border border-slate-100">
+                  {likersLoading ? (
+                    <div className="p-6 text-sm text-slate-500">Loading liked users...</div>
+                  ) : likers.length === 0 ? (
+                    <div className="p-6 text-sm text-slate-500">
+                      Nobody has liked this post yet, so there is nobody to send an offer to.
+                    </div>
+                  ) : (
+                    likers.map((likedUser) => {
+                      const isSelected = selectedLikerIds.includes(likedUser._id);
+                      return (
+                        <button
+                          key={likedUser._id}
+                          onClick={() => toggleLikerSelection(likedUser._id)}
+                          className={`flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors ${
+                            isSelected ? "bg-blue-50/70" : "bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className="shrink-0">
+                            {likedUser.profilePic ? (
+                              <img
+                                src={getDocumentUrl(likedUser.profilePic)}
+                                alt={likedUser.name || likedUser.username}
+                                className="h-11 w-11 rounded-full object-cover bg-slate-100"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="h-11 w-11 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
+                                {(likedUser.name || likedUser.username || "U").slice(0, 1).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate font-semibold text-slate-800">
+                                {likedUser.companyName || likedUser.name || likedUser.username}
+                              </p>
+                              <VerificationBadge user={likedUser} size="sm" />
+                            </div>
+                            <p className="truncate text-xs text-slate-500">@{likedUser.username}</p>
+                            <p className="text-[11px] text-slate-400">
+                              Liked on {new Date(likedUser.likedAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="shrink-0">
+                            {isSelected ? (
+                              <CheckSquare size={18} className="text-blue-600" />
+                            ) : (
+                              <Square size={18} className="text-slate-400" />
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              <div className="p-5">
+                <h3 className="text-lg font-bold text-slate-900">Offer Composer</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  This sends a chat offer that opens with the app's Buy Now flow.
+                </p>
+
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="text-sm font-semibold text-slate-700">Offer Price</label>
+                    <input
+                      value={offerForm.offerPrice}
+                      onChange={(e) =>
+                        setOfferForm((prev) => ({
+                          ...prev,
+                          offerPrice: e.target.value.replace(/[^0-9.]/g, ""),
+                        }))
+                      }
+                      placeholder="Enter special price"
+                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-slate-700">Message</label>
+                    <textarea
+                      value={offerForm.message}
+                      onChange={(e) =>
+                        setOfferForm((prev) => ({ ...prev, message: e.target.value }))
+                      }
+                      placeholder="Optional note to send after the offer card."
+                      className="mt-1 min-h-[140px] w-full rounded-xl border border-slate-300 px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <button
+                    onClick={() => sendOffer("selected")}
+                    disabled={offerSending || selectedLikerIds.length === 0}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    <SendHorizontal size={16} />
+                    {offerSending ? "Sending..." : `Send To Selected (${selectedLikerIds.length})`}
+                  </button>
+                  <button
+                    onClick={() => sendOffer("all")}
+                    disabled={offerSending || likers.length === 0}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                  >
+                    <Users size={16} />
+                    Send To All Who Liked ({likers.length})
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

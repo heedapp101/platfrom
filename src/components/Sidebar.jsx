@@ -38,6 +38,10 @@ export default function Sidebar({ collapsed }) {
                <span>👥</span>
                {!collapsed && <span>Users</span>}
             </NavLink>
+            <NavLink to={`${basePath}/badges`} className={linkClass}>
+               <span>BADGE</span>
+               {!collapsed && <span>Badge</span>}
+            </NavLink>
             <NavLink to={`${basePath}/deleted-users`} className={linkClass}>
                <span>DEL</span>
                {!collapsed && <span>Deleted Users</span>}
