@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { API_ENDPOINTS } from "../../config/api";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { io } from "socket.io-client";
+import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 import {
   Package, Clock, CheckCircle, Truck, XCircle, RefreshCw,
   Eye, Phone, MapPin, User, ChevronRight, X, Link2, Hash,
   CreditCard, ShoppingBag, Ban, ArrowRight, AlertTriangle, Calendar
 } from "lucide-react";
+
+const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
 const STATUS_CONFIG = {
   pending: { label: "Pending", color: "bg-amber-100 text-amber-700", dot: "bg-amber-500", icon: Clock },
@@ -68,6 +71,8 @@ const STATUS_ACTIONS = {
 };
 
 export default function SellerOrders() {
+  const socketRef = useRef(null);
+  const realtimeRefreshTimerRef = useRef(null);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +113,44 @@ export default function SellerOrders() {
 
   useEffect(() => {
     fetchOrders();
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return undefined;
+
+    socketRef.current = io(SOCKET_URL, {
+      auth: { token },
+      transports: ["websocket"],
+      upgrade: false,
+      rememberUpgrade: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+    });
+
+    const scheduleRealtimeRefresh = () => {
+      if (realtimeRefreshTimerRef.current) {
+        clearTimeout(realtimeRefreshTimerRef.current);
+      }
+
+      realtimeRefreshTimerRef.current = setTimeout(() => {
+        realtimeRefreshTimerRef.current = null;
+        fetchOrders();
+      }, 350);
+    };
+
+    socketRef.current.on("order-updated", scheduleRealtimeRefresh);
+
+    return () => {
+      if (realtimeRefreshTimerRef.current) {
+        clearTimeout(realtimeRefreshTimerRef.current);
+        realtimeRefreshTimerRef.current = null;
+      }
+      socketRef.current?.off("order-updated", scheduleRealtimeRefresh);
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+    };
   }, [fetchOrders]);
 
   useEffect(() => {
