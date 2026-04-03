@@ -124,6 +124,7 @@ export default function Approvals() {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [actionLoading, setActionLoading] = useState("");
 
   const fetchApprovals = async () => {
     const token = localStorage.getItem("token");
@@ -157,32 +158,36 @@ export default function Approvals() {
   }, []);
 
   const handleAction = async (id, action) => {
-    if (!id) return;
+    if (!id || actionLoading) return;
 
     const token = localStorage.getItem("token");
-    const verificationStatus = action === "approve" ? "approved" : "rejected";
+    const endpoint =
+      action === "approve" ? API_ENDPOINTS.ADMIN.APPROVE(id) : API_ENDPOINTS.ADMIN.REJECT(id);
+    const method = action === "approve" ? "PUT" : "DELETE";
+    const actionKey = `${id}:${action}`;
 
     try {
-      const res = await fetch(API_ENDPOINTS.USER.APPROVE, {
-        method: "PATCH",
+      setActionLoading(actionKey);
+
+      const res = await fetch(endpoint, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          userId: id,
-          verification_status: verificationStatus,
-        }),
       });
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         setPendingUsers((prev) => prev.filter((u) => u?._id !== id));
         setSelectedUser(null);
       } else {
-        alert("Action failed");
+        alert(data?.message || `Failed to ${action} account`);
       }
     } catch (error) {
       console.error(error);
+      alert(`Failed to ${action} account`);
+    } finally {
+      setActionLoading("");
     }
   };
 
@@ -506,15 +511,17 @@ export default function Approvals() {
             <div className="p-6 border-t bg-slate-50 flex justify-end gap-3">
               <button
                 onClick={() => handleAction(selectedUser?._id, "reject")}
+                disabled={Boolean(actionLoading)}
                 className="px-6 py-2 border border-red-200 text-red-600 font-semibold rounded-lg hover:bg-red-50 transition-colors"
               >
-                Reject Application
+                {actionLoading === `${selectedUser?._id}:reject` ? "Rejecting..." : "Reject Application"}
               </button>
               <button
                 onClick={() => handleAction(selectedUser?._id, "approve")}
+                disabled={Boolean(actionLoading)}
                 className="px-6 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20"
               >
-                Approve Business
+                {actionLoading === `${selectedUser?._id}:approve` ? "Approving..." : "Approve Business"}
               </button>
             </div>
           </div>
