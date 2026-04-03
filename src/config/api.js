@@ -31,6 +31,9 @@ export const API_ENDPOINTS = {
     FORGOT_PASSWORD_VERIFY_OTP: `${API_BASE_URL}/auth/forgot-password/verify-otp`,
     FORGOT_PASSWORD_RESET: `${API_BASE_URL}/auth/forgot-password/reset`,
   },
+  USER: {
+    APPROVE: `${API_BASE_URL}/user/approve`,
+  },
   ADMIN: {
     STATS: `${API_BASE_URL}/admin/stats`,
     ANALYTICS: `${API_BASE_URL}/admin/analytics/recommendations`,
