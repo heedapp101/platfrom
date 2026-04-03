@@ -439,7 +439,9 @@ export default function AdminUsers() {
                               className="px-3 py-2 text-xs text-slate-700 grid grid-cols-[120px_1fr_100px_90px] gap-2 items-center"
                             >
                               <div>
-                                <p className="font-semibold">{order.orderNumber}</p>
+                                <p className="font-semibold">
+                                  {order.displayId || order.orderNumber || order.id || order._id}
+                                </p>
                                 <p className="text-[11px] text-slate-400">
                                   {new Date(order.createdAt).toLocaleDateString()}
                                 </p>

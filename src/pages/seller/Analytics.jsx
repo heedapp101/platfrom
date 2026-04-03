@@ -439,7 +439,9 @@ export default function Analytics() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-800">{order.orderNumber}</p>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {order.displayId || order.orderNumber || order.id || order._id}
+                        </p>
                         <span
                           className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
                           style={{ backgroundColor: statusConfig.color + "20", color: statusConfig.color }}

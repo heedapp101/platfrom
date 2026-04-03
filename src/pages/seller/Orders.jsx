@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import { API_BASE_URL, API_ENDPOINTS } from "../../config/api";
 import {
   Package, Clock, CheckCircle, Truck, XCircle, RefreshCw,
-  Eye, Phone, MapPin, User, ChevronRight, X, Link2, Hash,
+  Phone, MapPin, User, ChevronRight, X, Link2, Hash,
   CreditCard, ShoppingBag, Ban, ArrowRight, AlertTriangle, Calendar
 } from "lucide-react";
 
@@ -70,12 +70,20 @@ const STATUS_ACTIONS = {
   refunded: [],
 };
 
+const getOrderIdentifier = (order) => String(order?.id || order?._id || "").trim();
+const getOrderDisplayId = (order) =>
+  String(order?.displayId || order?.orderNumber || getOrderIdentifier(order)).trim();
+const getOrderItemName = (item) => item?.productName || item?.title || item?.post?.title || "Product";
+const getOrderItemImage = (item) =>
+  item?.image || item?.post?.images?.[0]?.low || item?.post?.images?.[0] || "/placeholder.png";
+
 export default function SellerOrders() {
   const socketRef = useRef(null);
   const realtimeRefreshTimerRef = useRef(null);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updating, setUpdating] = useState(null); // orderId being updated
@@ -158,6 +166,29 @@ export default function SellerOrders() {
     return () => clearInterval(timer);
   }, []);
 
+  const fetchOrderDetails = useCallback(async (order) => {
+    const orderId = getOrderIdentifier(order);
+    const token = localStorage.getItem("token");
+    if (!orderId || !token) return;
+
+    setSelectedOrder(order);
+    setDetailLoading(true);
+
+    try {
+      const res = await fetch(API_ENDPOINTS.SELLER.ORDER_DETAILS(orderId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSelectedOrder(data);
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
   const handleStatusUpdate = useCallback(async (orderId, newStatus, extraData = {}) => {
     const token = localStorage.getItem("token");
     try {
@@ -200,7 +231,7 @@ export default function SellerOrders() {
       estimatedDelivery: deliveryDate.toISOString(),
     };
     if (trackingLink) extra.trackingLink = trackingLink;
-    await handleStatusUpdate(shipModalOrder._id, "shipped", extra);
+    await handleStatusUpdate(getOrderIdentifier(shipModalOrder), "shipped", extra);
     setShipModalOrder(null);
     setTrackingNumber("");
     setShippingCarrier("");
@@ -212,7 +243,7 @@ export default function SellerOrders() {
     if (action.needsModal) {
       setShipModalOrder(order);
     } else {
-      handleStatusUpdate(order._id, action.next, action.note ? { note: action.note } : {});
+      handleStatusUpdate(getOrderIdentifier(order), action.next, action.note ? { note: action.note } : {});
     }
   }, [handleStatusUpdate]);
 
@@ -244,8 +275,8 @@ export default function SellerOrders() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Orders</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Manage and track your customer orders</p>
+          <h1 className="text-2xl font-bold text-slate-800">My Orders</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Manage and track orders placed with your store</p>
         </div>
         <button
           onClick={fetchOrders}
@@ -365,9 +396,9 @@ export default function SellerOrders() {
         <div className="space-y-3">
           {orders.map((order) => (
             <OrderCard
-              key={order._id}
+              key={getOrderIdentifier(order)}
               order={order}
-              onView={() => setSelectedOrder(order)}
+              onView={() => fetchOrderDetails(order)}
               onAction={(action) => handleAction(order, action)}
               updating={updating}
               formatDate={formatDate}
@@ -380,6 +411,7 @@ export default function SellerOrders() {
       {selectedOrder && (
         <OrderDetailModal
           order={selectedOrder}
+          loading={detailLoading}
           onClose={() => setSelectedOrder(null)}
           onAction={(action) => handleAction(selectedOrder, action)}
           updating={updating}
@@ -400,7 +432,7 @@ export default function SellerOrders() {
             setEstimatedDays("3");
           }}
           onShip={handleShipOrder}
-          updating={updating === shipModalOrder._id}
+          updating={updating === getOrderIdentifier(shipModalOrder)}
           trackingNumber={trackingNumber}
           setTrackingNumber={setTrackingNumber}
           shippingCarrier={shippingCarrier}
@@ -420,7 +452,7 @@ function OrderCard({ order, onView, onAction, updating, formatDate }) {
   const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
   const StatusIcon = statusConfig.icon;
   const actions = STATUS_ACTIONS[order.status] || [];
-  const isUpdating = updating === order._id;
+  const isUpdating = updating === getOrderIdentifier(order);
 
   return (
     <div
@@ -436,7 +468,7 @@ function OrderCard({ order, onView, onAction, updating, formatDate }) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-slate-800 tracking-wide">
-                #{order.orderNumber?.slice(-6).toUpperCase()}
+                {getOrderDisplayId(order)}
               </span>
               <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusConfig.color}`}>
                 <StatusIcon size={12} />
@@ -452,13 +484,13 @@ function OrderCard({ order, onView, onAction, updating, formatDate }) {
           {/* Product info row */}
           <div className="flex items-center gap-3">
             <img
-              src={order.items?.[0]?.image || order.items?.[0]?.post?.images?.[0]?.low || "/placeholder.png"}
+              src={getOrderItemImage(order.items?.[0])}
               alt=""
               className="w-11 h-11 rounded-lg object-cover bg-slate-100 flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-700 truncate">
-                {order.items?.[0]?.title || "Product"}
+                {getOrderItemName(order.items?.[0])}
                 {order.items?.length > 1 && (
                   <span className="text-slate-400 ml-1">+{order.items.length - 1} more</span>
                 )}
@@ -501,11 +533,11 @@ function OrderCard({ order, onView, onAction, updating, formatDate }) {
 }
 
 /* ───────── Order Detail Modal ───────── */
-function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime, nowMs }) {
+function OrderDetailModal({ order, loading, onClose, onAction, updating, formatDateTime, nowMs }) {
   const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
   const StatusIcon = statusConfig.icon;
   const actions = STATUS_ACTIONS[order.status] || [];
-  const isUpdating = updating === order._id;
+  const isUpdating = updating === getOrderIdentifier(order);
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -517,7 +549,7 @@ function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime, 
         <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-start">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-slate-800">Order #{order.orderNumber}</h2>
+              <h2 className="text-lg font-bold text-slate-800">Order {getOrderDisplayId(order)}</h2>
               <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${statusConfig.color}`}>
                 <StatusIcon size={12} />
                 {statusConfig.label}
@@ -533,15 +565,21 @@ function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime, 
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
           <div className="p-6 space-y-6">
+            {loading && (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                Refreshing order details...
+              </div>
+            )}
+
             {/* Items */}
             <div>
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Items</h3>
               <div className="space-y-2">
                 {order.items?.map((item, idx) => (
                   <div key={idx} className="flex gap-3 p-3 bg-slate-50 rounded-xl">
-                    <img src={item.image || "/placeholder.png"} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                    <img src={getOrderItemImage(item)} alt="" className="w-16 h-16 rounded-lg object-cover" />
                     <div className="flex-1">
-                      <p className="font-medium text-slate-800 text-sm">{item.title}</p>
+                      <p className="font-medium text-slate-800 text-sm">{getOrderItemName(item)}</p>
                       {item.selectedSize && (
                         <p className="text-xs text-slate-500 mt-0.5">Size: {item.selectedSize}</p>
                       )}
@@ -553,6 +591,28 @@ function OrderDetailModal({ order, onClose, onAction, updating, formatDateTime, 
                 ))}
               </div>
             </div>
+
+            {order.seller && (
+              <div>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Seller</h3>
+                <div className="bg-slate-50 rounded-xl p-4 space-y-2.5">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <User size={15} className="text-slate-400" />
+                    <span className="text-slate-700 font-medium">
+                      {order.seller?.companyName || order.seller?.name || order.seller?.username || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <Phone size={15} className="text-slate-400" />
+                    <span className="text-slate-700">{order.seller?.phone || "N/A"}</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-sm">
+                    <MapPin size={15} className="text-slate-400 mt-0.5" />
+                    <span className="text-slate-700">{order.seller?.address || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Customer */}
             <div>
@@ -756,7 +816,7 @@ function ShipModal({
           <div>
             <h2 className="text-lg font-bold text-slate-800">Confirm Shipping</h2>
             <p className="text-sm text-slate-400 mt-0.5">
-              #{order.orderNumber?.slice(-6).toUpperCase()} • ₹{order.totalAmount}
+              {getOrderDisplayId(order)} • ₹{order.totalAmount}
             </p>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
@@ -768,12 +828,12 @@ function ShipModal({
           {/* Product preview */}
           <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
             <img
-              src={order.items?.[0]?.image || "/placeholder.png"}
+              src={getOrderItemImage(order.items?.[0])}
               alt=""
               className="w-10 h-10 rounded-lg object-cover"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 truncate">{order.items?.[0]?.title}</p>
+              <p className="text-sm font-medium text-slate-700 truncate">{getOrderItemName(order.items?.[0])}</p>
               <p className="text-xs text-slate-400">{order.buyer?.name} • {order.shippingAddress?.city}</p>
             </div>
           </div>

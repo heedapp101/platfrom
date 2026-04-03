@@ -1,15 +1,37 @@
+import {
+  Award,
+  BarChart3,
+  BellRing,
+  CheckSquare,
+  Flag,
+  Image,
+  LayoutDashboard,
+  Megaphone,
+  MessageSquare,
+  Package,
+  Rocket,
+  Scale,
+  Settings,
+  ShieldCheck,
+  Trash2,
+  Trophy,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+const iconClassName = "h-[18px] w-[18px] shrink-0";
+
 export default function Sidebar({ collapsed }) {
   const { user } = useAuth();
-  
-  // Determine base path based on role
   const basePath = user?.role === "admin" ? "/admin" : "/seller";
 
   const linkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-3 transition-colors ${
-      isActive ? "bg-slate-800 text-white border-r-4 border-blue-500" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+      isActive
+        ? "bg-slate-800 text-white border-r-4 border-blue-500"
+        : "text-slate-400 hover:bg-slate-800 hover:text-white"
     }`;
 
   return (
@@ -27,95 +49,97 @@ export default function Sidebar({ collapsed }) {
 
       <nav className="flex-1 py-4 space-y-1 overflow-y-auto">
         <NavLink to={`${basePath}`} end className={linkClass}>
-          <span>📊</span>
+          <LayoutDashboard className={iconClassName} />
           {!collapsed && <span>Overview</span>}
         </NavLink>
 
-        {/* Admin Specific Links */}
         {user?.role === "admin" ? (
           <>
             <NavLink to={`${basePath}/users`} className={linkClass}>
-               <span>👥</span>
-               {!collapsed && <span>Users</span>}
+              <Users className={iconClassName} />
+              {!collapsed && <span>Users</span>}
+            </NavLink>
+            <NavLink to={`${basePath}/orders`} className={linkClass}>
+              <Package className={iconClassName} />
+              {!collapsed && <span>Orders</span>}
             </NavLink>
             <NavLink to={`${basePath}/badges`} className={linkClass}>
-               <span>BADGE</span>
-               {!collapsed && <span>Badge</span>}
+              <Trophy className={iconClassName} />
+              {!collapsed && <span>Badge</span>}
             </NavLink>
             <NavLink to={`${basePath}/deleted-users`} className={linkClass}>
-               <span>DEL</span>
-               {!collapsed && <span>Deleted Users</span>}
+              <Trash2 className={iconClassName} />
+              {!collapsed && <span>Deleted Users</span>}
             </NavLink>
             <NavLink to={`${basePath}/approvals`} className={linkClass}>
-               <span>✅</span>
-               {!collapsed && <span>Approvals</span>}
+              <CheckSquare className={iconClassName} />
+              {!collapsed && <span>Approvals</span>}
             </NavLink>
             <NavLink to={`${basePath}/ads`} className={linkClass}>
-               <span>📢</span>
-               {!collapsed && <span>Ads Management</span>}
+              <Megaphone className={iconClassName} />
+              {!collapsed && <span>Ads Management</span>}
             </NavLink>
             <NavLink to={`${basePath}/boosts`} className={linkClass}>
-               <span>🚀</span>
-               {!collapsed && <span>Boost Control</span>}
+              <Rocket className={iconClassName} />
+              {!collapsed && <span>Boost Control</span>}
             </NavLink>
             <NavLink to={`${basePath}/revenue`} className={linkClass}>
-               <span>💰</span>
-               {!collapsed && <span>Revenue</span>}
+              <Wallet className={iconClassName} />
+              {!collapsed && <span>Revenue</span>}
             </NavLink>
             <NavLink to={`${basePath}/chat`} className={linkClass}>
-               <span>💬</span>
-               {!collapsed && <span>Support Chat</span>}
+              <MessageSquare className={iconClassName} />
+              {!collapsed && <span>Support Chat</span>}
             </NavLink>
             <NavLink to={`${basePath}/compliance`} className={linkClass}>
-               <span>🛡️</span>
-               {!collapsed && <span>Compliance</span>}
+              <ShieldCheck className={iconClassName} />
+              {!collapsed && <span>Compliance</span>}
             </NavLink>
             <NavLink to={`${basePath}/legal`} className={linkClass}>
-               <span>ðŸ“„</span>
-               {!collapsed && <span>Legal Docs</span>}
+              <Scale className={iconClassName} />
+              {!collapsed && <span>Legal Docs</span>}
             </NavLink>
             <NavLink to={`${basePath}/reports`} className={linkClass}>
-               <span>🚩</span>
-               {!collapsed && <span>Reported Posts</span>}
+              <Flag className={iconClassName} />
+              {!collapsed && <span>Reported Posts</span>}
             </NavLink>
             <NavLink to={`${basePath}/awards`} className={linkClass}>
-               <span>🏆</span>
-               {!collapsed && <span>Awards</span>}
+              <Award className={iconClassName} />
+              {!collapsed && <span>Awards</span>}
             </NavLink>
             <NavLink to={`${basePath}/push-notifications`} className={linkClass}>
-               <span>PUSH</span>
-               {!collapsed && <span>Push Notification</span>}
+              <BellRing className={iconClassName} />
+              {!collapsed && <span>Push Notification</span>}
             </NavLink>
             <NavLink to={`${basePath}/settings`} className={linkClass}>
-               <span>⚙️</span>
-               {!collapsed && <span>Settings</span>}
+              <Settings className={iconClassName} />
+              {!collapsed && <span>Settings</span>}
             </NavLink>
           </>
         ) : (
-          /* Seller Specific Links */
           <>
             <NavLink to={`${basePath}/posts`} className={linkClass}>
-              <span>🖼️</span>
+              <Image className={iconClassName} />
               {!collapsed && <span>Posts</span>}
             </NavLink>
             <NavLink to={`${basePath}/orders`} className={linkClass}>
-              <span>📦</span>
-              {!collapsed && <span>Orders</span>}
+              <Package className={iconClassName} />
+              {!collapsed && <span>My Orders</span>}
             </NavLink>
             <NavLink to={`${basePath}/analytics`} className={linkClass}>
-              <span>📉</span>
+              <BarChart3 className={iconClassName} />
               {!collapsed && <span>Analytics</span>}
             </NavLink>
             <NavLink to={`${basePath}/ads`} className={linkClass}>
-              <span>🚀</span>
+              <Rocket className={iconClassName} />
               {!collapsed && <span>Boost & Ads</span>}
             </NavLink>
             <NavLink to={`${basePath}/chat`} className={linkClass}>
-              <span>💬</span>
+              <MessageSquare className={iconClassName} />
               {!collapsed && <span>Support Chat</span>}
             </NavLink>
             <NavLink to={`${basePath}/settings`} className={linkClass}>
-              <span>⚙️</span>
+              <Settings className={iconClassName} />
               {!collapsed && <span>Settings</span>}
             </NavLink>
           </>
@@ -123,6 +147,4 @@ export default function Sidebar({ collapsed }) {
       </nav>
     </aside>
   );
-} 
-
-
+}

@@ -37,6 +37,7 @@ const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminBadges = lazy(() => import("./pages/admin/Badges"));
 const DeletedUsers = lazy(() => import("./pages/admin/DeletedUsers"));
 const AdminApprovals = lazy(() => import("./pages/admin/Approvals"));
+const AdminOrders = lazy(() => import("./pages/admin/Orders"));
 const Revenue = lazy(() => import("./pages/admin/Revenue"));
 const AdminChat = lazy(() => import("./pages/admin/Chat"));
 const AdminAds = lazy(() => import("./pages/admin/Ads"));
@@ -87,6 +88,8 @@ export default function App() {
         >
           <Route index element={<Overview />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="orders/:orderId" element={<AdminOrders />} />
           <Route path="badges" element={<AdminBadges />} />
           <Route path="deleted-users" element={<DeletedUsers />} />
           <Route path="approvals" element={<AdminApprovals />} />
