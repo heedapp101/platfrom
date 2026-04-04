@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Rocket, Clock, Eye, CheckCircle, AlertCircle, MessageSquare, Send, X, Image } from "lucide-react";
+import { Rocket, Clock, Eye, CheckCircle, AlertCircle, MessageSquare, Send, X, Image, Crown, Lock } from "lucide-react";
 import { API_BASE_URL } from "../../config/api";
+import API_ENDPOINTS from "../../config/api";
 
 // Memoized Boosted Post Card
 const BoostedPostCard = memo(function BoostedPostCard({ post, daysRemaining, onUnboost, unboosting = false }) {
@@ -106,6 +107,7 @@ export default function SellerAds() {
   const [submitting, setSubmitting] = useState(false);
   const [boostingPostId, setBoostingPostId] = useState(null);
   const [unboostingPostId, setUnboostingPostId] = useState(null);
+  const [subscription, setSubscription] = useState(undefined); // undefined=loading, null=none, object=active
 
   const token = useMemo(() => localStorage.getItem("token"), []);
 
@@ -125,9 +127,24 @@ export default function SellerAds() {
     }
   }, [token]);
 
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const res = await fetch(API_ENDPOINTS.SELLER.SUBSCRIPTION_ME, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSubscription(data.subscription); // null if no subscription
+      }
+    } catch {
+      setSubscription(null);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchBoostStatus();
-  }, [fetchBoostStatus]);
+    fetchSubscription();
+  }, [fetchBoostStatus, fetchSubscription]);
 
   const handleBoost = useCallback(async (postId) => {
     if (!postId || boostingPostId) return;
@@ -240,6 +257,11 @@ export default function SellerAds() {
 
   if (loading) return <div className="p-6 text-slate-500">Loading...</div>;
 
+  // ── Subscription gating ─────────────────────────────────
+  const hasSubscription = Boolean(subscription);
+  const boostLimitReached = hasSubscription && subscription.boostsUsed >= subscription.boostsLimit;
+  const activeBoostLimitReached = hasSubscription && subscription.activeBoosts >= subscription.maxActiveBoosts;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -263,6 +285,78 @@ export default function SellerAds() {
           </button>
         </div>
       </div>
+
+      {/* ━━━━━━ SUBSCRIPTION GATE ━━━━━━ */}
+      {subscription === undefined ? null : !hasSubscription ? (
+        /* No subscription — show locked state */
+        <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col items-center text-center gap-4">
+          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
+            <Lock size={28} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Boosting Locked</h2>
+            <p className="text-slate-400 text-sm mt-1">
+              You need an active subscription to boost your posts.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/seller/subscription")}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold transition-colors"
+          >
+            <Crown size={18} /> Get Subscription
+          </button>
+        </div>
+      ) : (
+        /* Has subscription — show plan info bar */
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-5 text-white">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Crown size={20} />
+              <div>
+                <p className="font-bold capitalize">{subscription.plan} Plan</p>
+                <p className="text-white/70 text-xs">
+                  Expires{" "}
+                  {new Date(subscription.endDate).toLocaleDateString("en-IN", {
+                    day: "numeric", month: "short", year: "numeric",
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-6 text-center">
+              <div>
+                <p className="text-xl font-bold">
+                  {subscription.boostsUsed}
+                  <span className="text-white/60 text-sm">/{subscription.boostsLimit}</span>
+                </p>
+                <p className="text-white/70 text-xs">Boosts Used</p>
+              </div>
+              <div>
+                <p className="text-xl font-bold">
+                  {subscription.activeBoosts}
+                  <span className="text-white/60 text-sm">/{subscription.maxActiveBoosts}</span>
+                </p>
+                <p className="text-white/70 text-xs">Active Boosts</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/seller/subscription")}
+              className="text-xs text-white/80 border border-white/30 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              Upgrade Plan
+            </button>
+          </div>
+          {boostLimitReached && (
+            <div className="mt-3 bg-amber-400/20 border border-amber-400/30 rounded-lg px-4 py-2 text-amber-200 text-sm flex items-center gap-2">
+              <AlertCircle size={15} /> Monthly boost limit reached. Resets on renewal.
+            </div>
+          )}
+          {!boostLimitReached && activeBoostLimitReached && (
+            <div className="mt-3 bg-amber-400/20 border border-amber-400/30 rounded-lg px-4 py-2 text-amber-200 text-sm flex items-center gap-2">
+              <AlertCircle size={15} /> Max active boosts reached. Unboost a post to boost another.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Boost Slots Overview */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 text-white">

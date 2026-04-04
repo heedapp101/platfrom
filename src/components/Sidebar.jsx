@@ -3,6 +3,7 @@ import {
   BarChart3,
   BellRing,
   CheckSquare,
+  Crown,
   Flag,
   Image,
   LayoutDashboard,
@@ -133,6 +134,10 @@ export default function Sidebar({ collapsed }) {
             <NavLink to={`${basePath}/ads`} className={linkClass}>
               <Rocket className={iconClassName} />
               {!collapsed && <span>Boost & Ads</span>}
+            </NavLink>
+            <NavLink to={`${basePath}/subscription`} className={linkClass}>
+              <Crown className={iconClassName} />
+              {!collapsed && <span>Subscription</span>}
             </NavLink>
             <NavLink to={`${basePath}/chat`} className={linkClass}>
               <MessageSquare className={iconClassName} />

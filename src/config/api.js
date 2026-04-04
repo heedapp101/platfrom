@@ -64,6 +64,8 @@ export const API_ENDPOINTS = {
     UPDATE_AWARD: (awardId) => `${API_BASE_URL}/admin/awards/manage/${awardId}`,
     DELETE_AWARD: (awardId) => `${API_BASE_URL}/admin/awards/manage/${awardId}`,
     AWARDED_PUBLIC: `${API_BASE_URL}/admin/awards/public`,
+    // Revenue
+    REVENUE: `${API_BASE_URL}/admin/revenue`,
   },
   LEGAL: {
     LIST: `${API_BASE_URL}/legal/admin`,
@@ -86,6 +88,8 @@ export const API_ENDPOINTS = {
     ORDER_STATS: `${API_BASE_URL}/orders/seller/stats`,
     ANALYTICS: (period = 30) => `${API_BASE_URL}/orders/seller/analytics?period=${period}`,
     ORDER_STATUS: (orderId) => `${API_BASE_URL}/orders/${orderId}/status`,
+    SUBSCRIPTION_ME: `${API_BASE_URL}/subscriptions/me`,
+    SUBSCRIPTION_SAVE: `${API_BASE_URL}/subscriptions`,
   },
   IMAGES: {
     ALL: `${API_BASE_URL}/images`,

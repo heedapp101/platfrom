@@ -30,6 +30,7 @@ const SellerAnalytics = lazy(() => import("./pages/seller/Analytics"));
 const SellerAds = lazy(() => import("./pages/seller/Ads"));
 const SellerChat = lazy(() => import("./pages/seller/Chat"));
 const SellerSettings = lazy(() => import("./pages/seller/Settings"));
+const SellerSubscription = lazy(() => import("./pages/seller/Subscription"));
 
 /* ADMIN - Lazy loaded */
 const Overview = lazy(() => import("./pages/admin/Overview"));
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="ads" element={<SellerAds />} />
           <Route path="chat" element={<SellerChat />} />
           <Route path="settings" element={<SellerSettings />} />
+          <Route path="subscription" element={<SellerSubscription />} />
         </Route>
 
         {/* ADMIN */}
