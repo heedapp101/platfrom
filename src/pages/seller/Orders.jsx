@@ -707,16 +707,54 @@ function OrderDetailModal({ order, loading, onClose, onAction, updating, formatD
             )}
 
             {/* Disputed info */}
-            {order.status === "disputed" && (
+            {(order.status === "disputed" || order.dispute) && (
               <div>
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Dispute</h3>
-                <div className="bg-rose-50 rounded-xl p-4 border border-rose-100">
-                  <div className="flex items-center gap-2.5 text-sm">
-                    <AlertTriangle size={15} className="text-rose-600" />
-                    <span className="text-rose-700 font-medium">The buyer has raised a dispute for this order.</span>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Dispute Evidence</h3>
+                <div className="bg-rose-50 rounded-xl p-5 border border-rose-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center">
+                        <AlertTriangle size={16} className="text-rose-600" />
+                      </div>
+                      <div>
+                        <span className="text-rose-700 font-bold block leading-tight">Buyer raised a dispute</span>
+                        {order.dispute?.disputeType && (
+                          <span className="text-xs text-rose-600/80 font-medium capitalize">
+                            Type: {order.dispute.disputeType.replace('_', ' ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {order.dispute?.createdAt && (
+                      <span className="text-xs text-rose-600/60 font-medium">
+                        {new Date(order.dispute.createdAt).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
-                  {order.disputeReason && (
-                    <p className="text-sm text-slate-700 mt-2 pl-6">{order.disputeReason}</p>
+
+                  {(order.dispute?.message || order.disputeReason) && (
+                    <div className="bg-white/60 rounded-lg p-3 text-sm text-slate-700 mb-4 border border-rose-100/50">
+                      <span className="font-semibold text-rose-800/80 mr-2 text-xs uppercase tracking-wide">Message:</span>
+                      {order.dispute?.message || order.disputeReason}
+                    </div>
+                  )}
+
+                  {((order.dispute?.imageUrls?.length > 0) || order.dispute?.videoUrl) && (
+                    <div className="mt-4 pt-4 border-t border-rose-200/50">
+                      <h4 className="text-xs font-bold text-rose-800/70 uppercase tracking-wide mb-3">Media Evidence</h4>
+                      <div className="flex flex-wrap gap-3">
+                        {order.dispute?.imageUrls?.map((url, i) => (
+                          <a key={i} href={typeof url === 'string' && !url.startsWith('http') ? API_BASE_URL.replace('/api', '') + url : url} target="_blank" rel="noopener noreferrer" className="block relative group overflow-hidden rounded-lg w-20 h-20 bg-rose-200/30 border border-rose-200 shadow-sm cursor-zoom-in">
+                            <img src={typeof url === 'string' && !url.startsWith('http') ? API_BASE_URL.replace('/api', '') + url : url} alt="Evidence" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                          </a>
+                        ))}
+                        {order.dispute?.videoUrl && (
+                          <div className="relative overflow-hidden rounded-lg w-40 h-20 bg-black/90 border border-rose-200 shadow-sm">
+                            <video src={typeof order.dispute.videoUrl === 'string' && !order.dispute.videoUrl.startsWith('http') ? API_BASE_URL.replace('/api', '') + order.dispute.videoUrl : order.dispute.videoUrl} controls className="w-full h-full object-contain" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
